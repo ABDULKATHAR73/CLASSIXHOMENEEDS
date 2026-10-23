@@ -1,0 +1,13 @@
+{
+  "name": "classic-home-needs",
+  "version": "4.1.0",
+  "description": "Classic Home Needs website \u2013 customer site and separate admin panel with shared live content",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

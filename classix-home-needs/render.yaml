@@ -1,0 +1,25 @@
+# Render.com blueprint. A persistent disk needs a paid plan: free plans erase files on every restart/deploy,
+# which would delete your products, photos and settings.
+services:
+  - type: web
+    name: classix-home-needs
+    runtime: node
+    plan: starter
+    buildCommand: echo "nothing to build"
+    startCommand: node server.js
+    healthCheckPath: /healthz
+    disk:
+      name: classix-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /var/data
+      - key: TRUST_PROXY
+        value: "1"
+      - key: FORCE_HTTPS
+        value: "1"
+      - key: PUBLIC_URL
+        sync: false            # e.g. https://www.your-domain.com (optional)
