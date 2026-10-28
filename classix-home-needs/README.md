@@ -1,3 +1,18 @@
+# v4.7.1 additions
+
+- **Retail / Wholesale tags**: hidden on the website by default. Admin > Retail & Wholesale Settings > switch "Show Retail / Wholesale available" ON to show them. When OFF, the retail/wholesale fields also disappear from the product form.
+- **Admin sliders** no longer change while scrolling: tap a slider once to unlock it ("unlocked - drag now"), then drag. It locks again after 8 seconds.
+- **Website Text & Labels** now also covers the new offer texts and the remaining labels (every word on buttons, headings, forms, offers, reviews).
+- Load test: 400 simultaneous visitors served with no failures.
+
+# What's new in v4.7
+
+- **PDF uploads now become real pictures.** When you upload a PDF (product, gallery, offer photos), every page is turned into a normal full picture in your browser (Mozilla pdf.js, bundled in `admin/pdfjs/`, Apache-2.0). No more PDF tile or blank preview. Up to 20 pages per PDF. PDFs uploaded earlier stay as they were - upload them again to convert.
+- **Offers completely rebuilt** (customer website and admin). Old offers are converted automatically on first start (a backup is saved first).
+  - Customer site: colourful themed offer cards (festival colours, discount seal, item thumbnails, special price + regular price, days left) and a new offer page with price ticket, live countdown, items list with quantity, photo gallery, details, terms and WhatsApp / Call buttons.
+  - Admin > Offers: every part is editable - theme, badge, title, tagline (Tamil/English), special price, regular price, items (photo, name, qty, price, note), start/end dates, countdown on/off, banner + unlimited photos, details, terms, WhatsApp button, extra button. Newest offer on top, with move up/down/top.
+  - Product-linked offer prices were removed (product cards now show only the normal price).
+
 # Classix Home Needs – Website (customer site + separate admin)
 
 Two separate parts that share one live data store:
@@ -109,3 +124,29 @@ data/            created automatically: content.json, reviews.json, uploads/, ba
 ```
 
 Visitor counting is anonymous (a random id kept in the visitor's browser, stored only as a hash); bots are ignored.
+
+
+## v4.2 notes
+* Photo upload accepts **HEIC, JPEG, PNG** (converted to JPEG/PNG on the device). Apple devices read HEIC natively. For Android browsers that cannot read HEIC, put the file `heic2any.min.js` (from the open-source heic2any project) into the `admin/` folder; the admin loads it automatically. Otherwise use the Camera button or set the camera to "Most Compatible".
+* Admin: password show/hide eye, category item count on/off, per-item on/off switches, WhatsApp button side/size/height/auto-hide controls.
+* Save errors: double taps and stale versions no longer show the red "changed somewhere else" popup; popups are now full-width and readable.
+
+## v4.4 notes
+* Offer details page now follows the blueprint (banner, products-included pill, numbered names, total products, special price, Close). Unlimited offer/product photos.
+* Admin: sliders, number boxes and drop-downs change only after a double tap/click; dashboard opens with Visitor statistics first.
+* Uploads read the file itself (JPEG, PNG, WebP, GIF, HEIC where the browser supports it, PDF); errors stay visible.
+
+## v4.5 notes
+* Offer page editor: add / edit / delete products (name Tamil + English, photo), total count, special price, banner, descriptions.
+* WhatsApp button shows on the home page only. Loading-screen logo is shown complete (no cropping) and the screen always disappears.
+* Uploads: JPG/PNG/HEIC/PDF, 5 MB per file, progress bar, Retry/Skip. See DEPLOY.md for going live.
+
+## What is new in v4.6
+* Admin drop-downs, sliders and number boxes work with one tap (the old double-tap lock is gone).
+* HEIC photos are converted on the server (`lib/heic.js`, libheif WebAssembly in `vendor/`, LGPL-3.0; jpeg-js encoder). No npm install needed. PDFs show a PDF tile in the admin and open in a new tab on the website.
+* Photos/photos-in-bulk upload 3 at a time and are shrunk on the phone first.
+* New default logo (transparent PNG): `seed/uploads/classix-logo.png`. Remove the logo in Store Settings to return to it.
+* Newest first: new offers, gallery photos, comments and customer reviews appear first. Use ⤒ ↑ ↓ in the admin to change the order. On first start the existing offers and gallery are reversed once (a backup `content-before-upgrade-*.json` is saved).
+* Customer reviews: 1–500 letters with a live counter, new attractive form.
+* Offer page shows product names, total count and the exact special price you type. Each offer has a 👁 Preview button.
+* Speed: files cached for a year, Brotli/gzip cached, fewer fonts, lighter animations on phones.

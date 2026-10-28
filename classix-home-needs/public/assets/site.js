@@ -20,7 +20,7 @@ const ico = n => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${P[n]}<
 const WA = '<svg class="i f" viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.1-1.3A10 10 0 1 0 12 2zm0 18.2a8.200 8.200 0 0 1-4.200-1.200l-.3-.2-3 .8.8-2.900-.2-.3A8.200 8.200 0 1 1 12 20.200zm4.500-6.100c-.2-.1-1.500-.7-1.700-.8-.2-.1-.4-.1-.6.100l-.8 1c-.1.200-.3.200-.5.100a6.700 6.700 0 0 1-3.300-2.900c-.2-.4.200-.4.700-1.300.1-.2 0-.3 0-.5l-.8-1.800c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.300-.2.300-.9.900-.9 2.200s.9 2.500 1.100 2.700c.1.200 1.800 2.800 4.400 3.900 1.600.7 2.300.8 3.100.6.500-.1 1.500-.6 1.700-1.200.2-.6.2-1.100.2-1.200-.1-.2-.3-.2-.6-.4z"/></svg>';
 
 /* ---------- helpers ---------- */
-const bi = (ta, en) => ta && en ? `<span class="ta">${esc(ta)}</span><span class="en">${esc(en)}</span>` : (ta ? `<span class="ta keep">${esc(ta)}</span>` : (en ? `<span class="en keep">${esc(en)}</span>` : ''));
+const bi = (ta, en) => ta && en ? `<span class="ta">${esc(ta)}</span> <span class="en">${esc(en)}</span>` : (ta ? `<span class="ta keep">${esc(ta)}</span>` : (en ? `<span class="en keep">${esc(en)}</span>` : ''));
 const lines = s => String(s || '').split('\n').map(x => x.trim()).filter(Boolean);
 const U = {
   home: ['முகப்பு', 'Home'], products: ['பொருட்கள்', 'Products'], categories: ['வகைகள்', 'Categories'], rw: ['சில்லறை & மொத்தம்', 'Retail & Wholesale'],
@@ -39,8 +39,17 @@ Object.assign(U, {
   offerNow: ['இப்போது', 'Now'], offerOngoing: ['தொடர்கிறது', 'Ongoing'], offerPeriod: ['சலுகைக் காலம்', 'Offer period'], offerList: ['சலுகையில் உள்ள பொருட்கள்', 'What is in this offer'], offerIncl: ['உள்ளடக்கம்', "What's included"],
   offerDetails: ['சலுகை விவரங்கள்', 'Offer details'], enqOffer: ['இந்தச் சலுகையை விசாரிக்க', 'Enquire about this offer'], errName: ['பெயரை உள்ளிடவும்', 'Enter your name'], errPhone: ['சரியான 10 இலக்க எண்', 'Enter a valid 10-digit mobile number'], waOpening: ['WhatsApp திறக்கிறது…', 'Opening WhatsApp…'],
   eyCat: ['வகைகள்', 'Categories'], eyProd: ['பொருட்கள் காட்சி', 'Product Showcase'], eyRw: ['சில்லறை · மொத்தம்', 'Retail · Wholesale'], eyOffers: ['சலுகைகள்', 'Offers'], eyWhy: ['ஏன் நாங்கள்', 'Why us'], eyGal: ['படங்கள்', 'Gallery'], eyContact: ['வருகை தாருங்கள்', 'Visit us'], eyReviews: ['கருத்துகள்', 'Reviews'],
-  reviewsTitle: ['வாடிக்கையாளர் கருத்துகள்', 'What Our Customers Say'], enqTitle: ['விசாரணை', 'Product Enquiry'], sendEnq: ['விசாரணை அனுப்புக', 'Send us an Enquiry'], photosSoon: ['படங்கள் விரைவில்', 'Photos coming soon'], viewOffer: ['சலுகை விவரங்கள்', 'View Offer Details'], oos: ['இருப்பு இல்லை', 'Out of stock'], writeReview: ["கருத்து எழுதுங்கள்", "Write a review"], rvAvg: ["சராசரி மதிப்பீடு", "Average rating"], rvCount: ["{n} கருத்துகள்", "{n} reviews"], rvCount1: ["1 கருத்து", "1 review"], rvYourName: ["உங்கள் பெயர்", "Your name"], rvYourRating: ["உங்கள் மதிப்பீடு", "Your rating"], rvYourText: ["உங்கள் கருத்து", "Your review"], rvSend: ["கருத்தை அனுப்புக", "Submit review"], rvFormTitle: ["உங்கள் அனுபவத்தைப் பகிருங்கள்", "Share your experience"], rvThanksPending: ["நன்றி! உங்கள் கருத்து சரிபார்ப்புக்குப் பிறகு இணையதளத்தில் தோன்றும்.", "Thank you! Your review will appear on the website after the shop approves it."], rvThanksLive: ["நன்றி! உங்கள் கருத்து இணையதளத்தில் சேர்க்கப்பட்டது.", "Thank you! Your review is now on the website."], rvErrName: ["பெயரை உள்ளிடவும் (2+ எழுத்துகள்)", "Enter your name (2+ letters)"], rvErrRating: ["நட்சத்திர மதிப்பீட்டைத் தேர்ந்தெடுக்கவும்", "Choose a star rating"], rvErrText: ["கருத்தை எழுதவும் (குறைந்தது 10 எழுத்துகள்)", "Write your review (at least 10 characters)"], rvErrLinks: ["இணைப்புகளைச் சேர்க்க வேண்டாம்", "Please do not include web links"], rvErrLimit: ["நிறைய கருத்துகள் அனுப்பப்பட்டுள்ளன. பிறகு முயற்சிக்கவும்.", "Too many reviews sent. Please try again later."], rvErr: ["அனுப்ப முடியவில்லை. மீண்டும் முயற்சிக்கவும்.", "Could not send. Please try again."], rvShopReply: ["கடையின் பதில்", "Reply from the shop"], rvMore: ["மேலும் கருத்துகள்", "Show more reviews"], rvNone: ["இன்னும் கருத்துகள் இல்லை. முதல் கருத்தை நீங்கள் எழுதுங்கள்!", "No reviews yet. Be the first to write one!"]
+  reviewsTitle: ['வாடிக்கையாளர் கருத்துகள்', 'What Our Customers Say'], enqTitle: ['விசாரணை', 'Product Enquiry'], sendEnq: ['விசாரணை அனுப்புக', 'Send us an Enquiry'], photosSoon: ['படங்கள் விரைவில்', 'Photos coming soon'], viewOffer: ['சலுகை விவரங்கள்', 'View Offer Details'], oos: ['இருப்பு இல்லை', 'Out of stock'], writeReview: ["கருத்து எழுதுங்கள்", "Write a review"], rvAvg: ["சராசரி மதிப்பீடு", "Average rating"], rvCount: ["{n} கருத்துகள்", "{n} reviews"], rvCount1: ["1 கருத்து", "1 review"], rvYourName: ["உங்கள் பெயர்", "Your name"], rvYourRating: ["உங்கள் மதிப்பீடு", "Your rating"], rvYourText: ["உங்கள் கருத்து", "Your review"], rvSend: ["கருத்தை அனுப்புக", "Submit review"], rvFormTitle: ["உங்கள் அனுபவத்தைப் பகிருங்கள்", "Share your experience"], rvThanksPending: ["நன்றி! உங்கள் கருத்து சரிபார்ப்புக்குப் பிறகு இணையதளத்தில் தோன்றும்.", "Thank you! Your review will appear on the website after the shop approves it."], rvThanksLive: ["நன்றி! உங்கள் கருத்து இணையதளத்தில் சேர்க்கப்பட்டது.", "Thank you! Your review is now on the website."], rvErrName: ["பெயரை உள்ளிடவும் (2+ எழுத்துகள்)", "Enter your name (2+ letters)"], rvErrRating: ["நட்சத்திர மதிப்பீட்டைத் தேர்ந்தெடுக்கவும்", "Choose a star rating"], rvErrText: ["கருத்தை எழுதவும் (1–500 எழுத்துகள்)", "Write your review (1 to 500 letters)"], rvErrLinks: ["இணைப்புகளைச் சேர்க்க வேண்டாம்", "Please do not include web links"], rvErrLimit: ["நிறைய கருத்துகள் அனுப்பப்பட்டுள்ளன. பிறகு முயற்சிக்கவும்.", "Too many reviews sent. Please try again later."], rvErr: ["அனுப்ப முடியவில்லை. மீண்டும் முயற்சிக்கவும்.", "Could not send. Please try again."], rvShopReply: ["கடையின் பதில்", "Reply from the shop"], rvMore: ["மேலும் கருத்துகள்", "Show more reviews"], rvNone: ["இன்னும் கருத்துகள் இல்லை. முதல் கருத்தை நீங்கள் எழுதுங்கள்!", "No reviews yet. Be the first to write one!"]
 });
+Object.assign(U, {
+  viewAllOffers: ['மேலும் ஆஃபர்கள் பார்க்க', 'View All Offers'], offersAllTitle: ['அனைத்து ஆஃபர்கள்', 'All Offers'], totalOffers: ['மொத்த ஆஃபர்கள்', 'Total Offers'],
+  productsIncluded: ['{n} பொருட்கள் இந்த ஆஃபரில்', '{n} Products Included'], offerWhat: ['இந்த ஆஃபரில் என்னென்ன பொருட்கள்?', "What's included in this offer?"],
+  offerTotalProducts: ['மொத்த பொருட்கள்', 'Total Products'], specialPrice: ['சிறப்பு விலை', 'Special Price'], totalLbl: ['மொத்தம்', 'Total'],
+  closeBtn: ['மூடு', 'Close'], seeMoreImg: ['மேலும் படங்கள்', 'See More Images'], totalImages: ['மொத்த படங்கள்', 'Total Images'], galAllTitle: ['கடை படங்கள்', 'Shop Gallery'],
+  seeAllReviews: ['அனைத்து விமர்சனங்கள்', 'See All Reviews'], totalReviews: ['மொத்த விமர்சனங்கள்', 'Total Reviews'], rvAllTitle: ['வாடிக்கையாளர் கருத்துகள்', 'Customer Reviews'],
+  backWeb: ['முகப்புப் பக்கத்திற்குத் திரும்ப', 'Back to Website'], pdfLbl: ['PDF கோப்பு', 'PDF file'], productsWord: ['பொருட்கள்', 'Products']
+});
+Object.assign(U, Object.fromEntries(Object.entries({ view: ['சலுகையைப் பார்க்க', 'View offer'], items: ['பொருட்கள்', 'items'], inc: ['இந்தச் சலுகையில்', "What's inside"], price: ['சிறப்பு விலை', 'Special price'], save: ['சேமிப்பு', 'You save'], ends: ['சலுகை முடிய', 'Offer ends in'], d: ['நாள்', 'Days'], h: ['மணி', 'Hrs'], m: ['நிமி', 'Min'], s: ['வினா', 'Sec'], from: ['தொடக்கம்', 'Starts'], till: ['முடிவு', 'Ends'], terms: ['நிபந்தனைகள்', 'Terms & conditions'], more: ['சலுகை விவரங்கள்', 'Offer details'], photos: ['படங்கள்', 'Photos'], enq: ['இந்தச் சலுகை பற்றி விசாரிக்க', 'Enquire about this offer'], ended: ['இந்தச் சலுகை முடிந்துவிட்டது', 'This offer has ended'], soon: ['விரைவில் தொடங்கும்', 'Starting soon'] }).map(([k, v]) => ['of_' + k, v])));
 const U0 = JSON.parse(JSON.stringify(U));
 function applyLabels() { for (const k in U0) U[k] = U0[k].slice(); const L = C.site.labels; if (L && typeof L === 'object') for (const k in L) if (U[k] && Array.isArray(L[k])) { if (String(L[k][0] || '').trim()) U[k][0] = String(L[k][0]).trim(); if (String(L[k][1] || '').trim()) U[k][1] = String(L[k][1]).trim(); } }
 const u = k => bi(U[k][0], U[k][1]);
@@ -53,6 +62,8 @@ function buildNav() {
 }
 const secOrder = () => { const out = [], seen = new Set(), known = new Set(DEF_SECS); for (const x of (Array.isArray(C.site.sections) ? C.site.sections : [])) if (x && known.has(x.id) && !seen.has(x.id)) { seen.add(x.id); if (x.show !== false) out.push(x.id); } for (const id of DEF_SECS) if (!seen.has(id)) out.push(id); return out; };
 const S = k => C.site[k] || '';
+const DEFAULT_LOGO = '/uploads/classix-logo.png';
+const LOGO = () => C.site.logo || DEFAULT_LOGO;
 const sb = k => bi(S(k + 'Ta'), S(k + 'En'));
 const cc = () => String(C.shop.countryCode || '91').replace(/\D/g, '') || '91';
 const intl = raw => { raw = String(raw || '').trim(); const d = raw.replace(/\D/g, ''); if (!d) return ''; if (raw.startsWith('+') || d.length > 10) return d; return cc() + d.slice(-10); };
@@ -66,7 +77,8 @@ const okLink = l => { l = normLink(l); return /^(https?:|tel:|mailto:|#|\/)/i.te
 const hrefAttr = l => /^https?:/i.test(String(l).trim()) ? `href="${esc(okLink(l))}" target="_blank" rel="noopener"` : `href="${esc(okLink(l || '#home'))}"`;
 const catOf = id => C.categories.find(c => c.id === id);
 const toast = m => { const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 3000); };
-const img = (src, alt, extra = '') => `<img src="${esc(src)}" alt="${esc(alt)}" loading="lazy" decoding="async" ${extra}>`;
+const isPdf = u => /\.pdf($|\?)/i.test(String(u || ''));
+const img = (src, alt, extra = '') => isPdf(src) ? `<span class="pdfi" role="img" aria-label="PDF"><b>📄</b>PDF</span>` :  `<img src="${esc(src)}" alt="${esc(alt)}" loading="lazy" decoding="async" ${extra}>`;
 /* fade images in once loaded (no inline handlers, so a strict Content-Security-Policy works) */
 document.addEventListener('load', e => { if (e.target && e.target.tagName === 'IMG') e.target.classList.add('in'); }, true);
 const markLoaded = () => $$('img').forEach(i => { if (i.complete && i.naturalWidth) i.classList.add('in'); });
@@ -85,7 +97,7 @@ function shell() {
   ${S('announcementTa') || S('announcement') ? `<div class="annc">${bi(S('announcementTa'), S('announcement'))}</div>` : ''}
   ${festBar()}
   <header class="top" id="top"><div class="wrap nav">
-    <a class="brand ${S('logo') && !S('uiLogoText') ? 'notext' : ''}" href="#home" aria-label="Home">${S('logo') ? `<span class="logo img"><img src="${esc(S('logo'))}" alt="${esc(s.name)}"></span>` : '<span class="logo">CH</span>'}<span class="brand-t">${s.est && C.site.estShow !== false ? `<small>${esc(C.shop.estLabel || 'EST.')} ${esc(s.est)}</small>` : ''}<b>${esc(s.name)}</b><span class="ta keep">${esc(s.nameTa || '')}</span></span></a>
+    <a class="brand ${!S('uiLogoText') ? 'notext' : ''}" href="#home" aria-label="Home"><span class="logo img"><img src="${esc(LOGO())}" alt="${esc(s.name)}" width="160" height="88" decoding="async" fetchpriority="high"></span><span class="brand-t">${s.est && C.site.estShow !== false ? `<small>${esc(C.shop.estLabel || 'EST.')} ${esc(s.est)}</small>` : ''}<b>${esc(s.name)}</b><span class="ta keep">${esc(s.nameTa || '')}</span></span></a>
     <nav class="links" aria-label="Main">${links}</nav>
     ${C.site.langBtn !== false ? '<button class="pill" id="langBtn" aria-label="Language"></button>' : ''}
     ${C.site.callPill !== false && s.phones[0] ? `<a class="pill call hide-sm" href="${telLink()}">${ico('phone')}<span>${esc(s.phones[0])}</span></a>` : ''}
@@ -99,7 +111,7 @@ function shell() {
   </nav></div>
   <main id="view">${page()}</main>
   <footer class="foot" id="foot">${footer()}</footer>
-  <div class="fab ${S('uiFabLabel') ? 'lbl' : ''}">${S('waButton') ? `<a class="wa" href="${S('waButtonMode') === 'group' && waGroupUrl() ? esc(waGroupUrl()) : waLink()}" target="_blank" rel="noopener" aria-label="WhatsApp">${WA}<span>${esc(S('waLabel') || 'WhatsApp')}</span></a>` : ''}<button class="up" id="toTop" aria-label="Top">${ico('up')}</button></div>
+  <div class="fab ${S('uiFabLabel') ? 'lbl' : ''} ${C.site.waPos === 'left' ? 'left' : ''}">${S('waButton') ? `<a class="wa" href="${S('waButtonMode') === 'group' && waGroupUrl() ? esc(waGroupUrl()) : waLink()}" target="_blank" rel="noopener" aria-label="WhatsApp">${WA}<span>${esc(S('waLabel') || 'WhatsApp')}</span></a>` : ''}<button class="up" id="toTop" aria-label="Top">${ico('up')}</button></div>
   <div class="modal" id="enqModal"><div class="bg" data-close></div><div class="box"><button class="x" data-close aria-label="Close">${ico('x')}</button><div id="enqBody"></div></div></div>
   <div class="modal" id="rvModal"><div class="bg" data-close></div><div class="box"><button class="x" data-close aria-label="Close">${ico('x')}</button><div id="rvBody"></div></div></div>
   <div class="modal" id="pModal"><div class="bg" data-close></div><div class="box wide"><button class="x" data-close aria-label="Close">${ico('x')}</button><div id="pBody"></div></div></div>
@@ -128,9 +140,9 @@ function creditHtml() {
 function footer() {
   const s = C.shop, so = C.social;
   const group = waGroupUrl() ? `<a class="wa-group" href="${esc(waGroupUrl())}" target="_blank" rel="noopener noreferrer">💬 ${esc(so.whatsappGroupLabelTa || 'வாட்ஸ்அப் குழுவில் சேரவும்')} <span class="en">${esc(so.whatsappGroupLabelEn || 'Join WhatsApp Group')}</span></a>` : '';
-  const soc = [['fb', so.facebook], ['ig', so.instagram], ['yt', so.youtube], ['web', so.website]].filter(x => x[1]).map(([k, h]) => `<a href="${esc(h)}" target="_blank" rel="noopener" aria-label="${k}">${ico(k)}</a>`).join('');
+  const soc = [['fb', so.facebook], ['ig', so.instagram], ['yt', so.youtube], ['web', so.website]].filter(x => String(x[1] || '').trim()).map(([k, h]) => [k, /^https?:\/\//i.test(String(h).trim()) ? String(h).trim() : 'https://' + String(h).trim()]).map(([k, h]) => `<a href="${esc(h)}" target="_blank" rel="noopener" aria-label="${k}">${ico(k)}</a>`).join('');
   return `<div class="wrap"><div class="fgrid">
-    <div class="fb">${S('logo') ? `<img class="flogo" src="${esc(S('logo'))}" alt="${esc(s.name)}">` : ''}<b>${esc(s.name)}</b><span class="ta keep" style="color:var(--gold2)">${esc(s.nameTa || '')}</span><p>${bi(S('footerTextTa'), S('footerTextEn'))}</p><div class="soc"><a href="${waLink()}" target="_blank" rel="noopener" aria-label="WhatsApp">${WA}</a>${soc}</div>${group}</div>
+    <div class="fb"><img class="flogo" src="${esc(LOGO())}" alt="${esc(s.name)}" loading="lazy" decoding="async"><b>${esc(s.name)}</b><span class="ta keep" style="color:var(--gold2)">${esc(s.nameTa || '')}</span><p>${bi(S('footerTextTa'), S('footerTextEn'))}</p><div class="soc"><a href="${waLink()}" target="_blank" rel="noopener" aria-label="WhatsApp">${WA}</a>${soc}</div></div>
     <div><h4>${bi(U.quick[0], U.quick[1])}</h4>${NAV.map(([k, h, l]) => `<a href="${h}">${l}</a>`).join('')}</div>
     <div><h4>${bi(U.address[0], U.address[1])}</h4>${s.address.map(x => `<div class="fl">${esc(x)}</div>`).join('')}<a href="${mapSearch()}" target="_blank" rel="noopener" style="color:var(--gold2)">${bi(U.directions[0], U.directions[1])} →</a></div>
     <div><h4>${bi(U.hours[0], U.hours[1])}</h4>${s.hours.map(x => `<div class="fl">${esc(x.replace('|', ' · '))}</div>`).join('')}<h4 style="margin-top:16px">${bi(U.phone[0], U.phone[1])}</h4>${s.phones.map(p => `<a href="${telLink(p)}">${esc(p)}</a>`).join('')}${s.email ? `<a href="${esc(mailLink(s.email))}">${esc(s.email)}</a>` : ''}${C.site.footerShowGst && s.gstin ? `<div class="fl" style="margin-top:12px">GSTIN: ${esc(s.gstin)}${s.gstNote ? ' · ' + esc(s.gstNote) : ''}</div>` : ''}</div>
@@ -139,24 +151,83 @@ function footer() {
 
 /* ---------- components ---------- */
 /* ---------- offers, deals & prices ---------- */
-const FEST = { diwali: ['🪔', 'Diwali', 'தீபாவளி', 't-diwali'], pongal: ['🌾', 'Pongal', 'பொங்கல்', 't-pongal'], puthandu: ['🌼', 'Tamil New Year', 'தமிழ் புத்தாண்டு', 't-puthandu'], christmas: ['🎄', 'Christmas', 'கிறிஸ்துமஸ்', 't-xmas'], eid: ['🌙', 'Ramzan / Eid', 'ரம்ஜான்', 't-eid'], newyear: ['🎆', 'New Year', 'புத்தாண்டு', 't-newyear'], sale: ['🏷️', 'Sale', 'சிறப்பு விற்பனை', 't-sale'] };
+/* ---------- offers (v4.7) ---------- */
+const OT = { special: ['✨', 'Special', 'சிறப்பு'], diwali: ['🪔', 'Diwali', 'தீபாவளி'], pongal: ['🌾', 'Pongal', 'பொங்கல்'], puthandu: ['🌼', 'Tamil New Year', 'தமிழ் புத்தாண்டு'], christmas: ['🎄', 'Christmas', 'கிறிஸ்துமஸ்'], eid: ['🌙', 'Ramzan / Eid', 'ரம்ஜான்'], newyear: ['🎆', 'New Year', 'புத்தாண்டு'], sale: ['🏷️', 'Sale', 'சிறப்பு விற்பனை'], wholesale: ['📦', 'Wholesale', 'மொத்த விலை'], new: ['🆕', 'New arrivals', 'புதிய வரவு'], gift: ['🎁', 'Gifts', 'பரிசுகள்'] };
+const ox = k => u('of_' + k);
+const th = o => OT[o.theme] ? o.theme : 'special';
 const ymd = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 const offerLive = o => { if (!o || !o.active) return false; const t = ymd(new Date()); return (!o.startDate || t >= o.startDate) && (!o.endDate || t <= o.endDate); };
 const liveOffers = () => (C.offers || []).filter(offerLive);
 const daysLeft = o => o.endDate ? Math.round((new Date(o.endDate + 'T00:00:00') - new Date(ymd(new Date()) + 'T00:00:00')) / 864e5) : null;
 const leftText = n => { if (n <= 0) return u('lastDay'); const k = n > 1 ? 'daysLeft' : 'dayLeft'; return bi(U[k][0].replace('{n}', n), U[k][1].replace('{n}', n)); };
-const offerPriceOf = (o, it, p) => { const x = it && it.price; if (x !== '' && x != null && !isNaN(Number(x)) && Number(x) >= 0) return Number(x); const pct = Number(o.discountPct); if (pct > 0 && p && p.price != null && p.price !== '') return Math.round(Number(p.price) * (1 - pct / 100)); return null; };
-function deal(p) { let best = null; for (const o of liveOffers()) { const it = (o.items || []).find(x => x.id === p.id); if (!it) continue; const pr = offerPriceOf(o, it, p); if (pr != null && (!best || pr < best.price)) best = { price: pr, offer: o }; } return best; }
+const dFmt = s => { const d = new Date(s + 'T00:00:00'); return isNaN(d) ? '' : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); };
+const pos = v => v !== '' && v != null && !isNaN(Number(v)) && Number(v) > 0 ? Number(v) : null;
+function offerInfo(o) {
+  const items = (Array.isArray(o.items) ? o.items : []).filter(x => x && (x.ta || x.en || x.img)).map(x => ({ ta: x.ta || '', en: x.en || '', img: x.img || '', note: x.note || '', qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: pos(x.price) }));
+  const count = items.reduce((a, x) => a + x.qty, 0), price = pos(o.price);
+  let was = pos(o.oldPrice); if (was == null && items.length && items.every(x => x.price != null)) was = items.reduce((a, x) => a + x.price * x.qty, 0);
+  if (was != null && price != null && was <= price) was = null;
+  const save = was != null && price != null ? was - price : 0, pct = save ? Math.round(save / was * 100) : 0;
+  const photos = [...(o.photos || []).filter(Boolean)]; if (o.image && !photos.includes(o.image)) photos.unshift(o.image);
+  return { items, count, price, was, save, pct, photos };
+}
+const ofPrice = n => n.price != null ? `<div class="of-price"><b>${money(n.price)}</b>${n.was != null ? `<s>${money(n.was)}</s>` : ''}</div>` : '';
+const ofThumb = x => x.img && !isPdf(x.img) ? `<img src="${esc(x.img)}" alt="" loading="lazy" decoding="async">` : `<span>${esc((x.en || x.ta || '•').trim().charAt(0).toUpperCase())}</span>`;
+function offerCards() {
+  const all = liveOffers(), N = Math.floor(Number(C.site.offersHomeCount)), list = N > 0 ? all.slice(0, N) : all;
+  return `<div class="of-grid">${list.map((o, i) => {
+    const t = th(o), f = OT[t], n = offerInfo(o), dl = daysLeft(o), shown = n.items.slice(0, 4);
+    return `<article class="of-card of-${t}" data-r="up" data-offer="${esc(o.id)}" tabindex="0" role="button" style="--i:${i % 3}">
+      <div class="of-top">${o.image ? img(o.image, o.titleEn || o.titleTa) : ''}<span class="of-wm">${f[0]}</span>
+        <div class="of-tags"><span class="of-tag">${f[0]} ${bi(f[2], f[1])}</span>${o.badge ? `<span class="of-tag alt">${esc(o.badge)}</span>` : ''}</div>
+        ${n.pct ? `<div class="of-seal"><b>${n.pct}%</b><small>OFF</small></div>` : ''}</div>
+      <div class="of-body"><h3>${bi(o.titleTa, o.titleEn)}</h3>${o.tagTa || o.tagEn ? `<p>${bi(o.tagTa, o.tagEn)}</p>` : ''}
+        ${shown.length ? `<div class="of-strip">${shown.map(x => `<i>${ofThumb(x)}</i>`).join('')}${n.items.length > 4 ? `<i class="more">+${n.items.length - 4}</i>` : ''}<span class="of-cnt">🎁 ${n.count} ${ox('items')}</span></div>` : ''}
+        <div class="of-foot">${ofPrice(n)}${dl != null && o.timer !== false ? `<span class="of-left">⏳ ${leftText(dl)}</span>` : ''}</div>
+        <button class="btn gold of-go" data-offer="${esc(o.id)}"><span class="t">${ox('view')} <i>›</i></span></button></div></article>`;
+  }).join('')}</div>${all.length > list.length ? `<div class="lp-more"><button type="button" class="btn gold big" data-lp="offers"><span class="t">${u('viewAllOffers')} <i>›</i></span></button></div>` : ''}`;
+}
+let ofTimer = 0;
+function ofTick() {
+  const els = $$('[data-cd]'); if (!els.length) { clearInterval(ofTimer); ofTimer = 0; return; }
+  els.forEach(el => { const end = new Date(el.dataset.cd + 'T23:59:59').getTime() - Date.now(); if (end <= 0) return; const s = Math.floor(end / 1000), v = [Math.floor(s / 86400), Math.floor(s % 86400 / 3600), Math.floor(s % 3600 / 60), s % 60]; $$('b', el).forEach((b, k) => { b.textContent = String(v[k]).padStart(2, '0'); }); });
+}
+function openOffer(id, fromHash) {
+  const o = (C.offers || []).find(x => x.id === id); if (!o) return;
+  const t = th(o), f = OT[t], n = offerInfo(o), live = offerLive(o), title = o.titleEn || o.titleTa || 'Offer';
+  const al = v => Array.isArray(v) ? v.filter(Boolean) : lines(v), tA = al(o.termsTa), tE = al(o.termsEn), terms = Array.from({ length: Math.max(tA.length, tE.length) }, (_, k) => bi(tA[k], tE[k]));
+  const msg = `Hi, I am interested in the offer: ${title}${o.titleTa && o.titleEn ? ' (' + o.titleTa + ')' : ''}${n.price != null ? ' – ' + money(n.price) : ''}`;
+  const started = !o.startDate || ymd(new Date()) >= o.startDate;
+  let pg = $('#opage'); if (!pg) { pg = document.createElement('div'); pg.id = 'opage'; pg.className = 'opage'; pg.setAttribute('role', 'dialog'); pg.setAttribute('aria-modal', 'true'); document.body.appendChild(pg); }
+  pg.innerHTML = `<div class="op-bar"><button class="op-arrow" data-opclose aria-label="Back">←</button><b class="op-bt">${f[0]} ${bi(o.titleTa, o.titleEn)}</b><button class="op-x" data-opclose aria-label="Close">✕</button></div>
+  <div class="op-in ofd of-${t}">
+    <section class="ofd-hero">${o.image && !isPdf(o.image) ? `<img class="ofd-bg" src="${esc(o.image)}" alt="">` : ''}<span class="of-wm big">${f[0]}</span>
+      <div class="of-tags"><span class="of-tag">${f[0]} ${bi(f[2], f[1])}</span>${o.badge ? `<span class="of-tag alt">${esc(o.badge)}</span>` : ''}${!live ? `<span class="of-tag end">${started ? ox('ended') : ox('soon')}</span>` : ''}</div>
+      <h1>${bi(o.titleTa, o.titleEn)}</h1>${o.tagTa || o.tagEn ? `<p>${bi(o.tagTa, o.tagEn)}</p>` : ''}</section>
+    ${n.price != null ? `<section class="ofd-ticket"><div class="tk-l"><small>${ox('price')}</small><div class="tk-p"><b>${money(n.price)}</b>${n.was != null ? `<s>${money(n.was)}</s>` : ''}</div>${n.save ? `<em>🎉 ${ox('save')} ${money(n.save)} (${n.pct}%)</em>` : ''}</div><div class="tk-r">${n.count ? `<div><b>${n.count}</b><span>${ox('items')}</span></div>` : ''}${n.pct ? `<div class="hot"><b>${n.pct}%</b><span>OFF</span></div>` : ''}</div></section>` : ''}
+    ${live && o.timer !== false && o.endDate ? `<section class="ofd-cd"><small>⏳ ${ox('ends')}</small><div data-cd="${esc(o.endDate)}"><div><b>00</b><span>${ox('d')}</span></div><div><b>00</b><span>${ox('h')}</span></div><div><b>00</b><span>${ox('m')}</span></div><div><b>00</b><span>${ox('s')}</span></div></div></section>` : ''}
+    ${o.startDate || o.endDate ? `<div class="ofd-dates">${o.startDate ? `<span>📅 ${ox('from')}: <b>${dFmt(o.startDate)}</b></span>` : ''}${o.endDate ? `<span>🏁 ${ox('till')}: <b>${dFmt(o.endDate)}</b></span>` : ''}</div>` : ''}
+    ${n.items.length ? `<h2 class="ofd-h">${ox('inc')} <i>${n.count}</i></h2><div class="ofd-items">${n.items.map(x => `<div class="ofd-it"><div class="ofd-im">${ofThumb(x)}${x.qty > 1 ? `<b>×${x.qty}</b>` : ''}</div><div class="ofd-nm"><b>${bi(x.ta, x.en)}</b>${x.note ? `<small>${esc(x.note)}</small>` : ''}${x.price != null ? `<em>${money(x.price)}</em>` : ''}</div></div>`).join('')}</div>` : ''}
+    ${n.photos.length ? `<h2 class="ofd-h">${ox('photos')}</h2><div class="ofd-ph">${n.photos.map((s, k) => `<button type="button" data-oph="${k}" aria-label="Photo ${k + 1}">${isPdf(s) ? '📄' : `<img src="${esc(s)}" alt="${esc(title)}" loading="lazy" decoding="async">`}</button>`).join('')}</div>` : ''}
+    ${(o.detailsTa || o.detailsEn) ? `<h2 class="ofd-h">${ox('more')}</h2><div class="op-det">${bi(o.detailsTa, o.detailsEn)}</div>` : ''}
+    ${terms.length ? `<h2 class="ofd-h">${ox('terms')}</h2><ul class="ofd-terms">${terms.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
+    <div class="op-cta">${o.wa === false ? '' : waBtn('', msg, ox('enq'))}${callBtn('dark')}${o.link ? btn('light', o.link, bi(o.ctaTa, o.ctaEn) || u('details')) : ''}</div>
+    <button type="button" class="btn dark op-closebtn" data-opclose><span class="t">✕ ${u('closeBtn')}</span></button>
+  </div>`;
+  const ph = n.photos.filter(s => !isPdf(s)); $$('[data-oph]', pg).forEach(b => b.onclick = () => { const s = n.photos[+b.dataset.oph]; if (isPdf(s)) { window.open(s, '_blank', 'noopener'); return; } openLightbox(ph.map(x => ({ url: x, title, description: '' })), Math.max(0, ph.indexOf(s))); });
+  closeModals(); pg.scrollTop = 0; pg.classList.add('open'); document.body.classList.add('op-open'); observe(pg);
+  ofTick(); if (!ofTimer) ofTimer = setInterval(ofTick, 1000);
+  if (!fromHash) { try { history.pushState({ op: id }, '', '#offer-' + id); } catch { /* ignore */ } }
+}
+function closeOffer(fromPop) { const pg = $('#opage'); if (!pg || !pg.classList.contains('open')) return; pg.classList.remove('open'); if (!$('#lpage.open')) document.body.classList.remove('op-open'); clearInterval(ofTimer); ofTimer = 0; if (!fromPop && history.state && history.state.op) history.back(); }
 const priceHtml = p => {
-  const d = deal(p), base = p.price != null && p.price !== '' ? Number(p.price) : null, unit = p.unit ? `<small> / ${esc(p.unit)}</small>` : '';
-  if (d) { const was = base != null && base > d.price ? base : (p.mrp && p.mrp > d.price ? p.mrp : null); return `<div class="price deal">${money(d.price)}${was ? `<s>${money(was)}</s>` : ''}${unit}</div>`; }
+  const base = p.price != null && p.price !== '' ? Number(p.price) : null, unit = p.unit ? `<small> / ${esc(p.unit)}</small>` : '';
   if (base != null) return `<div class="price">${money(p.price)}${p.mrp && p.mrp > p.price ? `<s>${money(p.mrp)}</s>` : ''}${unit}</div>`;
   return `<div class="price"><small>${esc(U.askPrice[1])}</small></div>`;
 };
 const badgeHtml = p => {
-  const d = deal(p); let b = '';
-  if (d) { const f = FEST[d.offer.festival] || [], base = Number(p.price), pct = base > 0 && base > d.price ? Math.round((1 - d.price / base) * 100) : 0; b = `<span class="badge">${f[0] || '🏷️'} ${pct ? pct + '% OFF' : esc(d.offer.badge || 'OFFER')}</span>`; }
-  else if (p.badge) b = `<span class="badge">${esc(p.badge)}</span>`;
+  let b = '';
+  if (p.badge) b = `<span class="badge">${esc(p.badge)}</span>`;
   return b + (p.inStock === false ? `<span class="oos-tag">${esc(U.oos[1])} · ${esc(U.oos[0])}</span>` : '');
 };
 function productCard(p, i = 0) {
@@ -165,7 +236,7 @@ function productCard(p, i = 0) {
     <a class="ph" href="#products" data-pd="${esc(p.id)}" aria-label="${esc(p.name)}">${badgeHtml(p)}${im ? img(im, p.name) : `<span class="em">${esc(c.icon || '🛍️')}</span>`}</a>
     <div class="cbody"><span class="ccat">${esc(c.name || '')}</span><h3><a href="#products" data-pd="${esc(p.id)}">${bi(p.nameTa, p.name)}</a></h3>
       <p class="d">${esc(p.subtitle || p.description || '')}</p>
-      <div class="tags">${p.retail ? `<span class="tag">✓ ${esc(U.retail[1])}</span>` : ''}${p.wholesale ? `<span class="tag w">✓ ${esc(U.wholesale[1])}</span>` : ''}</div>
+      <div class="tags">${C.site.showAvail === true ? (p.retail ? `<span class="tag">✓ ${esc(U.retail[1])}</span>` : '') + (p.wholesale ? `<span class="tag w">✓ ${esc(U.wholesale[1])}</span>` : '') : ''}</div>
       ${priceHtml(p)}
       <div class="cacts"><button class="btn line sm" data-pd="${esc(p.id)}"><span class="t">${u('details')}</span></button><button class="btn gold sm" data-enq="${esc(p.id)}"><span class="t">${u('enquire')}</span></button></div>
     </div></article>`;
@@ -173,62 +244,52 @@ function productCard(p, i = 0) {
 function catCards() {
   return `<div class="cats">${C.categories.filter(c => c.visible !== false).map((c, i) => {
     const n = products.filter(p => p.category === c.id).length;
-    return `<a class="cat" href="#products" data-cat="${esc(c.id)}" data-r="zoom" style="--i:${i % 4}"><div class="ic">${esc(c.icon)}</div>${bi(c.ta, c.name)}${n ? `<em>${n} ${n === 1 ? 'item' : 'items'}</em>` : ''}</a>`;
+    return `<a class="cat" href="#products" data-cat="${esc(c.id)}" data-r="zoom" style="--i:${i % 4}"><div class="ic">${esc(c.icon)}</div>${bi(c.ta, c.name)}${n && C.site.catCountShow !== false && c.showCount !== false ? `<em>${bi(n + ' பொருட்கள்', n + (n === 1 ? ' item' : ' items'))}</em>` : ''}</a>`;
   }).join('')}</div>`;
 }
-function offerCards() {
-  const list = liveOffers();
-  return `<div class="offers">${list.map((o, i) => {
-    const f = FEST[o.festival];
-    const rows = (o.items || []).map(it => { const p = products.find(x => x.id === it.id); return p ? { p, pr: offerPriceOf(o, it, p) } : null; }).filter(Boolean);
-    const pcts = rows.map(r => r.pr != null && r.p.price != null && Number(r.p.price) > r.pr ? Math.round((1 - r.pr / Number(r.p.price)) * 100) : 0).filter(Boolean);
-    const maxPct = pcts.length ? Math.max(...pcts) : 0, same = pcts.length && pcts.every(x => x === pcts[0]);
-    const dl = daysLeft(o);
-    return `<article class="offer ${f ? 'fest ' + f[3] : ''}" data-r="up" data-offer="${esc(o.id)}" tabindex="0" role="button" style="--i:${i % 3}">${o.image ? img(o.image, o.titleEn || o.titleTa) : ''}${f ? `<span class="o-emoji">${f[0]}</span>` : ''}
-      <div class="o-in"><div class="o-top">${f ? `<span>${f[0]} ${bi(f[2], f[1])}</span>` : ''}${o.badge ? `<span>${esc(o.badge)}</span>` : ''}${maxPct ? `<span class="o-deal">${same ? '' : 'UP TO '}${maxPct}% OFF</span>` : ''}${dl != null ? `<span class="o-count">⏳ ${leftText(dl)}</span>` : ''}</div>
-      <h3>${bi(o.titleTa, o.titleEn)}</h3><p>${bi(o.textTa, o.textEn)}</p>
-      ${rows.length ? `<div class="o-items">${rows.slice(0, 3).map(r => `<div class="o-row"><span>${esc(r.p.nameTa || r.p.name)}</span><b>${r.pr != null ? money(r.pr) : ''}${r.pr != null && r.p.price != null && r.p.price !== '' && Number(r.p.price) > r.pr ? `<s>${money(r.p.price)}</s>` : ''}</b></div>`).join('')}${rows.length > 3 ? `<div class="o-row"><span>+ ${rows.length - 3} more</span></div>` : ''}</div>` : ''}
-      <div class="o-btns"><button class="btn gold" data-offer="${esc(o.id)}"><span class="t">${u('viewOffer')}</span></button>${o.link ? btn('light', o.link, bi(o.ctaTa, o.ctaEn) || u('details')) : ''}</div></div></article>`;
-  }).join('')}</div>`;
+function galHome(g) {
+  const N = Math.floor(Number(C.site.galleryHomeCount)), cut = N > 0 && g.length > N, list = cut ? g.slice(0, N) : g;
+  const chips = !cut && C.galleryCategories.some(c => g.some(x => x.category === c.id)) ? `<div class="chips" id="gchips" style="margin-bottom:22px"><button class="on" data-c="all">${u('all')}</button>${C.galleryCategories.filter(c => g.some(x => x.category === c.id)).map(c => `<button data-c="${esc(c.id)}">${bi(c.ta, c.name)}</button>`).join('')}</div>` : '';
+  return chips + `<div class="masonry" id="masonry">${list.map((x, i) => galItem(x, i)).join('')}</div>` + (cut ? `<div class="lp-more"><button type="button" class="btn gold big" data-lp="gallery"><span class="t">🖼️ ${u('seeMoreImg')}</span></button></div>` : '');
 }
-const dFmt = s => { const d = new Date(s + 'T00:00:00'); return isNaN(d) ? '' : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); };
-function offerRows(o) { return (o.items || []).map(it => { const p = products.find(x => x.id === it.id); if (!p) return null; const q = Math.max(1, Math.round(Number(it.qty) || 1)), pr = offerPriceOf(o, it, p), base = p.price != null && p.price !== '' ? Number(p.price) : null; return { p, q, pr, base }; }).filter(Boolean); }
-function openOffer(id, fromHash) {
-  const o = (C.offers || []).find(x => x.id === id); if (!o) return; const f = FEST[o.festival];
-  const rows = offerRows(o), inc = lines(o.includes), dl = daysLeft(o), live = offerLive(o);
-  const photos = [...(o.photos || []).filter(Boolean)]; if (o.image && !photos.includes(o.image)) photos.unshift(o.image);
-  const qtyTotal = rows.reduce((a, r) => a + r.q, 0) + (rows.length ? 0 : inc.length);
-  const sumOffer = rows.length && rows.every(r => r.pr != null) ? rows.reduce((a, r) => a + r.pr * r.q, 0) : null;
-  const sumBase = rows.length && rows.every(r => r.base != null) ? rows.reduce((a, r) => a + r.base * r.q, 0) : null;
-  const bundle = o.bundlePrice !== '' && o.bundlePrice != null && !isNaN(Number(o.bundlePrice)) && Number(o.bundlePrice) > 0 ? Number(o.bundlePrice) : null;
-  const price = bundle != null ? bundle : sumOffer, was = sumBase != null && price != null && sumBase > price ? sumBase : null;
-  const save = was ? was - price : 0, pct = was ? Math.round(save / was * 100) : 0;
-  const title = (o.titleEn || o.titleTa || 'Offer'), msg = `Hi, I am interested in the offer: ${title}${o.titleTa ? ' (' + o.titleTa + ')' : ''}${price != null ? ' – ' + money(price) : ''}`;
-  let pg = $('#opage'); if (!pg) { pg = document.createElement('div'); pg.id = 'opage'; pg.className = 'opage'; pg.setAttribute('role', 'dialog'); pg.setAttribute('aria-modal', 'true'); document.body.appendChild(pg); }
-  pg.innerHTML = `<div class="op-bar"><button class="btn line sm op-back" data-opclose aria-label="Back"><span class="t">${u('backBtn')}</span></button><b class="op-bt">${f ? f[0] + ' ' : ''}${bi(o.titleTa, o.titleEn)}</b></div>
-  <div class="op-in"><div class="op-grid">
-    <div class="op-media">${photos.length ? `<div class="op-main" id="opMain"><img src="${esc(photos[0])}" alt="${esc(title)}" id="opImg">${f ? `<span class="o-emoji">${f[0]}</span>` : ''}</div>${photos.length > 1 ? `<div class="thumbs op-th">${photos.map((s, k) => `<button class="${k ? '' : 'on'}" data-oth="${k}" aria-label="Photo ${k + 1}"><img src="${esc(s)}" alt=""></button>`).join('')}</div>` : ''}` : `<div class="op-main op-ph"><span class="em">${f ? f[0] : '🏷️'}</span></div>`}</div>
-    <div class="op-info">
-      <div class="op-chips">${f ? `<span>${f[0]} ${bi(f[2], f[1])}</span>` : ''}${o.badge ? `<span>${esc(o.badge)}</span>` : ''}${pct ? `<span class="hot">${pct}% OFF</span>` : ''}${live && dl != null ? `<span class="cd">⏳ ${leftText(dl)}</span>` : ''}${!live ? `<span class="cd">${u('offerEnded')}</span>` : ''}</div>
-      <h1>${bi(o.titleTa, o.titleEn)}</h1>
-      ${(o.textTa || o.textEn) ? `<p class="op-lead">${bi(o.textTa, o.textEn)}</p>` : ''}
-      ${price != null ? `<div class="op-price"><small>${u('offerPrice')}</small><div><b>${money(price)}</b>${was ? `<s>${money(was)}</s>` : ''}</div>${save > 0 ? `<em>${u('youSave')} ${money(save)}</em>` : ''}</div>` : ''}
-      <div class="op-facts">${qtyTotal ? `<div><b>${qtyTotal}</b><span>${u('offerCount')}</span></div>` : ''}${o.startDate || o.endDate ? `<div><b class="sm">${o.startDate ? dFmt(o.startDate) : u('offerNow')} – ${o.endDate ? dFmt(o.endDate) : u('offerOngoing')}</b><span>${u('offerPeriod')}</span></div>` : ''}</div>
-    </div></div>
-    ${rows.length ? `<h2 class="op-h">${u('offerList')}</h2><div class="op-list">${rows.map(r => `<button class="op-row" data-pd="${esc(r.p.id)}">${r.p.images && r.p.images[0] ? `<img src="${esc(r.p.images[0])}" alt="" loading="lazy">` : `<span class="em">${esc((catOf(r.p.category) || {}).icon || '🛍️')}</span>`}<span class="nm"><b>${bi(r.p.nameTa, r.p.name)}</b><small>${bi('எண்ணிக்கை', 'Quantity')}: <i>${r.q}</i>${r.pr != null ? ` × ${money(r.pr)}` : ''}</small></span><span class="pr">${r.pr != null ? `<b>${money(r.pr * r.q)}</b>${r.base != null && r.base > r.pr ? `<s>${money(r.base * r.q)}</s>` : ''}` : ''}</span></button>`).join('')}</div>` : ''}
-    ${inc.length ? `<h2 class="op-h">${u('offerIncl')}</h2><ul class="op-inc">${inc.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
-    ${(o.detailsTa || o.detailsEn) ? `<h2 class="op-h">${u('offerDetails')}</h2><div class="op-det">${bi(o.detailsTa, o.detailsEn)}</div>` : ''}
-    <div class="op-cta">${waBtn('', msg, u('enqOffer'))}${callBtn('dark')}${o.link ? btn('light', o.link, bi(o.ctaTa, o.ctaEn) || u('details')) : ''}</div>
-  </div>`;
-  const main = $('#opImg'); if (main) { const ph = photos; $$('[data-oth]', pg).forEach(b => b.onclick = () => { main.src = ph[+b.dataset.oth]; $$('[data-oth]', pg).forEach(x => x.classList.toggle('on', x === b)); }); $('#opMain').onclick = () => openLightbox(ph.map(s => ({ url: s, title, description: '' })), Math.max(0, ph.indexOf(main.getAttribute('src')))); }
-  closeModals(); pg.scrollTop = 0; pg.classList.add('open'); document.body.classList.add('op-open'); observe(pg);
-  if (!fromHash) { try { history.pushState({ op: id }, '', '#offer-' + id); } catch { /* ignore */ } }
+const lpTotal = (k, n) => `<div class="lp-total"><span>${k}</span><b>${n}</b></div>`;
+function lpBody(kind) {
+  if (kind === 'offers') {
+    const list = liveOffers();
+    return { t: U.offersAllTitle, total: lpTotal(bi(U.totalOffers[0], U.totalOffers[1]), list.length), html: `<div class="lp-offers">${list.map(o => { const n = offerInfo(o), f = OT[th(o)]; return `<button type="button" class="lp-oc" data-offer="${esc(o.id)}">${o.image && !isPdf(o.image) ? `<span class="lp-oi">${img(o.image, o.titleEn || o.titleTa)}</span>` : `<span class="lp-oi em">${f[0]}</span>`}<span class="lp-on"><b>${bi(o.titleTa, o.titleEn)}</b>${n.count ? `<small>${n.count} ${ox('items')}</small>` : ''}${n.price != null ? `<em>${money(n.price)}</em>` : ''}</span><i class="lp-ch">›</i></button>`; }).join('')}</div>` };
+  }
+  if (kind === 'gallery') {
+    const g = gal();
+    const chips = C.galleryCategories.some(c => g.some(x => x.category === c.id)) ? `<div class="chips" id="lpchips" style="margin-bottom:16px"><button class="on" data-lpc="all">${u('all')}</button>${C.galleryCategories.filter(c => g.some(x => x.category === c.id)).map(c => `<button data-lpc="${esc(c.id)}">${bi(c.ta, c.name)}</button>`).join('')}</div>` : '';
+    return { t: U.galAllTitle, total: lpTotal(bi(U.totalImages[0], U.totalImages[1]), g.length), html: chips + `<div class="masonry lp-mas">${g.map((x, i) => galItem(x, i)).join('')}</div>` };
+  }
+  const all = rvList();
+  return { t: U.rvAllTitle, total: lpTotal(bi(U.totalReviews[0], U.totalReviews[1]), all.length), html: `<div class="testi lp-rv">${all.join('')}</div>${C.site.reviewForm !== false ? `<div class="rv-act"><button type="button" class="btn rv-write" data-rv-open><span class="t"><i>★</i> ${u('writeReview')}</span></button></div>` : ''}` };
 }
-function closeOffer(fromPop) { const pg = $('#opage'); if (!pg || !pg.classList.contains('open')) return; pg.classList.remove('open'); document.body.classList.remove('op-open'); if (!fromPop && history.state && history.state.op) history.back(); }
-addEventListener('popstate', () => { const h = location.hash.match(/^#offer-(.+)$/); if (h) openOffer(decodeURIComponent(h[1]), true); else closeOffer(true); });
+function openList(kind, fromPop) {
+  let pg = $('#lpage'); if (!pg) { pg = document.createElement('div'); pg.id = 'lpage'; pg.className = 'opage lpage'; pg.setAttribute('role', 'dialog'); pg.setAttribute('aria-modal', 'true'); document.body.appendChild(pg); }
+  if (!(pg.classList.contains('open') && pg.dataset.kind === kind)) {
+    const b = lpBody(kind);
+    pg.innerHTML = `<div class="op-bar"><button class="op-arrow" data-lpclose aria-label="Back">←</button><b class="op-bt">${bi(b.t[0], b.t[1])}</b><button class="op-x" data-lpclose aria-label="Close">✕</button></div><div class="op-in">${b.total}${b.html}</div><div class="lp-foot"><button type="button" class="btn dark" data-lpclose><span class="t">✕ ${u('closeBtn')}</span></button></div>`;
+    pg.dataset.kind = kind; pg.scrollTop = 0; markLoaded(); observe(pg);
+    $$('img', pg).forEach(i => { i.classList.add('in'); });
+  }
+  closeModals(); pg.classList.add('open'); document.body.classList.add('op-open');
+  if (!fromPop) { try { history.pushState({ lp: kind }, '', '#all-' + kind); } catch { /* ignore */ } }
+}
+function closeList(fromPop) {
+  const pg = $('#lpage'); if (!pg || !pg.classList.contains('open')) return;
+  pg.classList.remove('open'); if (!$('#opage.open')) document.body.classList.remove('op-open');
+  if (!fromPop && history.state && history.state.lp) history.back();
+}
+addEventListener('popstate', () => {
+  const h = location.hash, om = h.match(/^#offer-(.+)$/), lm = h.match(/^#all-(offers|gallery|reviews)$/);
+  if (om) openOffer(decodeURIComponent(om[1]), true); else closeOffer(true);
+  if (lm) openList(lm[1], true); else if (!om) closeList(true);
+});
 addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('op-open') && !$('.modal.open') && !$('#lb.open')) closeOffer(); });
 function festBar() {
-  const o = liveOffers().find(x => FEST[x.festival]); if (!o) return ''; const f = FEST[o.festival], dl = daysLeft(o);
+  const o = liveOffers().find(x => x.theme && x.theme !== 'special' && OT[x.theme] && !['wholesale', 'new', 'gift'].includes(x.theme)); if (!o) return ''; const f = OT[o.theme], dl = daysLeft(o);
   return `<a class="fest-bar" href="#offers"><span class="em">${f[0]}</span><span>${bi(o.titleTa, o.titleEn)}</span>${dl != null ? `<u>${leftText(dl)}</u>` : ''}<span class="em">${f[0]}</span></a>`;
 }
 const whyCards = () => `<div class="why">${C.why.map((w, i) => `<div class="wy" data-r="up" style="--i:${i % 3}"><div class="ic">${esc(w.icon)}</div><h3>${bi(w.titleTa, w.titleEn)}</h3><p>${bi(w.textTa, w.textEn)}</p></div>`).join('')}</div>`;
@@ -241,7 +302,7 @@ function rwCards() {
 }
 const aboutBlock = () => `<div class="about"><div class="about-img" data-r="left">${S('aboutImage') ? img(S('aboutImage'), C.shop.name) : ''}<div class="est"><b>${esc(C.shop.est)}</b><small>${esc(C.shop.estLabel || 'EST.')}</small></div></div>
   <div data-r="right"><h2>${sb('aboutTitle')}</h2><p>${bi(S('aboutTa'), S('aboutEn'))}</p><div class="tagline">${sb('storeTagline')}</div><div class="cbtns" style="margin-top:20px">${btn('dark', '#contact', u('contact'))}${btn('line', '#gallery', u('gallery'))}</div></div></div>`;
-const galItem = (x, i) => `<a class="gi" data-r="zoom" style="--i:${i % 4}" data-gi="${i}" data-gcat="${esc(x.category)}" href="${esc(x.url)}" aria-label="${esc(x.title || 'photo')}">${img(x.url, x.title || C.shop.name)}<span class="zm">${ico('zin')}</span><span class="ov">${x.title ? `<b>${esc(x.title)}</b>` : ''}${x.description ? `<span>${esc(x.description)}</span>` : ''}</span></a>`;
+const galItem = (x, i) => `<a class="gi" ${isPdf(x.url) ? 'target="_blank" rel="noopener" ' : ''}data-r="zoom" style="--i:${i % 4}" data-gi="${i}" data-gcat="${esc(x.category)}" href="${esc(x.url)}" aria-label="${esc(x.title || 'photo')}">${img(x.url, x.title || C.shop.name)}<span class="zm">${ico('zin')}</span><span class="ov">${x.title ? `<b>${esc(x.title)}</b>` : ''}${x.description ? `<span>${esc(x.description)}</span>` : ''}</span></a>`;
 const gal = () => C.gallery.filter(g => g.visible !== false);
 function enquiryForm(type = 'general', pid = '') {
   const t = ['retail', 'wholesale', 'general'];
@@ -279,8 +340,8 @@ function openProduct(id) {
     ${imgs.length > 1 ? `<div class="thumbs">${imgs.map((s, i) => `<button class="${i ? '' : 'on'}" data-th="${i}" aria-label="Photo ${i + 1}"><img src="${esc(s)}" alt=""></button>`).join('')}</div>` : ''}</div>
     <div><span class="ccat">${esc(c.icon || '')} ${esc(c.name || '')}</span><h1>${bi(p.nameTa, p.name)}</h1>${priceHtml(p)}
     <p class="desc">${bi(p.descriptionTa, p.description || p.subtitle)}</p>
-    <div class="avail"><div>${p.retail ? '✅' : '⛔'}<span><b>${bi(U.retail[0], U.retail[1])}</b>${p.retail ? bi(U.retailAv[0], U.retailAv[1]) : 'Not available'}</span></div>
-    <div>${p.wholesale ? '✅' : '⛔'}<span><b>${bi(U.wholesale[0], U.wholesale[1])}</b>${p.wholesale ? bi(U.wholesaleAv[0], U.wholesaleAv[1]) : 'Not available'}${p.wholesaleNote ? `<br><small style="color:var(--muted)">${esc(p.wholesaleNote)}</small>` : ''}</span></div></div>
+    ${C.site.showAvail === true ? `<div class="avail"><div>${p.retail ? '✅' : '⛔'}<span><b>${bi(U.retail[0], U.retail[1])}</b>${p.retail ? bi(U.retailAv[0], U.retailAv[1]) : 'Not available'}</span></div>
+    <div>${p.wholesale ? '✅' : '⛔'}<span><b>${bi(U.wholesale[0], U.wholesale[1])}</b>${p.wholesale ? bi(U.wholesaleAv[0], U.wholesaleAv[1]) : 'Not available'}${p.wholesaleNote ? `<br><small style="color:var(--muted)">${esc(p.wholesaleNote)}</small>` : ''}</span></div></div>` : ''}
     <div class="acts"><button class="btn gold" data-enq="${esc(p.id)}"><span class="t">${u('enquire')}</span></button>${waBtn('', msg)}${callBtn('dark')}</div></div></div>`;
   const main = $('#pdImg'); let ci = 0;
   $$('#pBody [data-th]').forEach(b => b.onclick = () => { ci = +b.dataset.th; main.src = imgs[ci]; $$('#pBody [data-th]').forEach(x => x.classList.toggle('on', x === b)); });
@@ -318,7 +379,7 @@ function page() {
     offers: (act ? sec('offers', head(sb('offersTitle'), sb('offersSub'), 'eyOffers'), offerCards()) : ''),
     why: sec('why', head(sb('whyTitle'), sb('whySub'), 'eyWhy'), whyCards()),
     gallery: sec('gallery', head(sb('galleryTitle'), sb('galleryDesc'), 'eyGal'),
-      g.length ? `<div class="chips" id="gchips" style="margin-bottom:22px"><button class="on" data-c="all">${u('all')}</button>${C.galleryCategories.filter(c => g.some(x => x.category === c.id)).map(c => `<button data-c="${esc(c.id)}">${bi(c.ta, c.name)}</button>`).join('')}</div><div class="masonry" id="masonry">${g.map(galItem).join('')}</div>` : `<div class="empty"><b>📷</b>${u('photosSoon')}</div>`),
+      g.length ? galHome(g) : `<div class="empty"><b>📷</b>${u('photosSoon')}</div>`),
     about: sec('about', '', aboutBlock()),
     testimonials: reviewsSection(),
     contact: sec('contact', head(sb('contactTitle'), sb('contactSub'), 'eyContact'), contactBlock()),
@@ -339,7 +400,7 @@ function contactBlock() {
     <div class="formcard" style="margin-top:18px"><h3>${u('sendEnq')}</h3>${enquiryForm('general')}</div></div></div>`;
 }
 const WA_GROUP_RE = /^https:\/\/chat\.whatsapp\.com\/[A-Za-z0-9_-]{10,40}\/?(\?[^\s#]*)?$/;
-const waGroupUrl = () => { const v = String((C.social || {}).whatsappGroup || '').trim(); return WA_GROUP_RE.test(v) ? v : ''; };
+const waGroupUrl = () => { const so = C.social || {}; if (so.whatsappGroupOn === false) return ''; const v = String(so.whatsappGroup || '').trim(); return WA_GROUP_RE.test(v) ? v : ''; };
 const WA_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.04 2a9.9 9.9 0 0 0-8.5 14.9L2 22l5.27-1.38A9.9 9.9 0 1 0 12.04 2Zm5.8 14.1c-.25.7-1.45 1.34-2 1.4-.52.06-1.17.09-1.9-.12a17 17 0 0 1-1.72-.64c-3.03-1.31-5-4.37-5.15-4.57-.15-.2-1.23-1.64-1.23-3.12 0-1.49.78-2.22 1.06-2.52.28-.3.6-.38.8-.38l.58.01c.19 0 .43-.07.67.5.25.6.84 2.06.91 2.2.07.16.12.33.02.53-.1.2-.15.32-.3.5l-.45.52c-.15.15-.3.31-.13.6.17.3.77 1.27 1.65 2.05 1.14 1 2.1 1.32 2.4 1.47.3.15.47.12.65-.07.17-.2.75-.87.95-1.17.2-.3.4-.25.67-.15.28.1 1.74.82 2.04.97.3.15.5.22.57.35.08.12.08.72-.17 1.42Z"/></svg>';
 const waGroupBlock = () => { const url = waGroupUrl(); if (!url) return ''; const so = C.social;
   return `<section class="wag" id="whatsapp-group"><div class="wrap"><div class="wag-in" data-r="zoom"><div class="wag-t"><span class="wag-ic">${WA_SVG}</span><div><h3>${bi(so.whatsappGroupTitleTa || 'எங்கள் வாட்ஸ்அப் குழுவில் இணையுங்கள்', so.whatsappGroupTitleEn || 'Join our WhatsApp Group')}</h3><p>${bi(so.whatsappGroupTextTa || 'புதிய பொருட்கள், சலுகைகள் மற்றும் அறிவிப்புகளை முதலில் பெறுங்கள்.', so.whatsappGroupTextEn || 'Get new arrivals, offers and updates first.')}</p></div></div><a class="wag-btn" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${WA_SVG}<span>${bi(so.whatsappGroupLabelTa || 'வாட்ஸ்அப் குழுவில் சேரவும்', so.whatsappGroupLabelEn || 'Join Our WhatsApp Group')}</span></a></div></div></section>`; };
@@ -394,7 +455,7 @@ function countUp(el) {
 
 /* ---------- lightbox ---------- */
 let LB = { list: [], i: 0, s: 1, x: 0, y: 0 };
-function openLightbox(list, i) { LB.list = list; LB.i = i; $('#lb').classList.add('open'); document.body.style.overflow = 'hidden'; lbShow(0); }
+function openLightbox(list, i) { const cur = list[i]; if (cur && isPdf(cur.url)) { window.open(cur.url, '_blank', 'noopener'); return; } list = list.filter(x => !isPdf(x.url)); if (!list.length) return; i = Math.max(0, list.indexOf(cur)); LB.list = list; LB.i = i; $('#lb').classList.add('open'); document.body.style.overflow = 'hidden'; lbShow(0); }
 function closeLightbox() { $('#lb').classList.remove('open'); document.body.style.overflow = ''; }
 function lbTransform(anim) { const im = $('#lbImg'); im.classList.toggle('anim', !!anim); im.style.transform = `translate(${LB.x}px,${LB.y}px) scale(${LB.s})`; im.style.cursor = LB.s > 1 ? 'grab' : 'zoom-in'; }
 function lbReset() { LB.s = 1; LB.x = 0; LB.y = 0; lbTransform(false); }
@@ -443,6 +504,8 @@ function applyUI() {
   const g = k => { const v = C.site[k]; return v === undefined || v === null || v === '' ? UI[k] : v; };
   const n = (k, lo, hi) => Math.min(hi, Math.max(lo, Number(g(k)) || UI[k]));
   const st = document.documentElement.style;
+  const n2 = (k, lo, hi, d) => { const v = Number(C.site[k]); return Math.min(hi, Math.max(lo, C.site[k] !== '' && C.site[k] != null && isFinite(v) ? v : d)); };
+  st.setProperty('--wa-size', n2('waSize', 44, 84, 56) + 'px'); st.setProperty('--wa-bottom', n2('waBottom', 8, 160, 16) + 'px'); st.setProperty('--wa-side', n2('waSide', 4, 60, 14) + 'px');
   st.setProperty('--ui-zoom', n('uiZoom', 70, 130) / 100);
   st.setProperty('--hero-h', n('uiHeroHeightM', 260, 800) + 'px'); st.setProperty('--hero-h-d', n('uiHeroHeightD', 360, 900) + 'px');
   st.setProperty('--hero-title', n('uiHeroTitleM', 16, 56) + 'px'); st.setProperty('--hero-title-d', n('uiHeroTitleD', 24, 96) + 'px');
@@ -455,6 +518,7 @@ function applyUI() {
   const col = (k, v) => { const x = String(C.site[k] || ''); if (/^#[0-9a-f]{6}$/i.test(x)) st.setProperty(v, x); else st.removeProperty(v); };
   col('uiColorBrown', '--brown'); col('uiColorBrown2', '--brown2'); col('uiColorGold', '--gold'); col('uiColorGold2', '--gold2'); col('uiColorCream', '--cream');
   const tc = document.querySelector('meta[name=theme-color]'); if (tc) tc.content = /^#[0-9a-f]{6}$/i.test(String(C.site.uiColorBrown || '')) ? C.site.uiColorBrown : '#4a2f20';
+  document.documentElement.dataset.fit = C.site.imgFit === 'cover' ? 'cover' : 'contain';
   document.documentElement.dataset.anim = ['full', 'light', 'off'].includes(String(g('uiAnim'))) ? g('uiAnim') : 'full';
   document.documentElement.dataset.glow = g('uiGlow') === false || g('uiGlow') === 'false' ? 'off' : 'on';
 }
@@ -463,14 +527,17 @@ function renderAll(keep) {
   document.title = S('seoTitle') || `${C.shop.name} | ${C.shop.nameTa || ''} – Retail & Wholesale, ${C.shop.city || ''}`;
   if (keep) scrollTo(0, y);
 }
-document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('article.offer[data-offer]')) { e.preventDefault(); openOffer(e.target.dataset.offer); } });
+document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.of-card[data-offer]')) { e.preventDefault(); openOffer(e.target.dataset.offer); } });
 document.addEventListener('click', e => {
   if (e.target.closest('[data-opclose]')) { e.preventDefault(); closeOffer(); return; }
+  if (e.target.closest('[data-lpclose]')) { e.preventDefault(); closeList(); return; }
+  const lpb = e.target.closest('[data-lp]'); if (lpb) { e.preventDefault(); openList(lpb.dataset.lp); return; }
+  const lpc = e.target.closest('[data-lpc]'); if (lpc) { $$('[data-lpc]').forEach(x => x.classList.toggle('on', x === lpc)); $$('#lpage .gi').forEach(x => x.classList.toggle('hide', lpc.dataset.lpc !== 'all' && x.dataset.gcat !== lpc.dataset.lpc)); return; }
   const of = e.target.closest('[data-offer]'); if (of) { if (e.target.closest('a[href]') && !e.target.closest('button[data-offer]')) return; e.preventDefault(); openOffer(of.dataset.offer); return; }
   const pd = e.target.closest('[data-pd]'); if (pd) { e.preventDefault(); openProduct(pd.dataset.pd); return; }
   const enq = e.target.closest('[data-enq]'); if (enq) { e.preventDefault(); openEnq(enq.dataset.enq); return; }
-  const cat = e.target.closest('[data-cat]'); if (cat) { e.preventDefault(); setCat(cat.dataset.cat); $('#products').scrollIntoView({ behavior: 'smooth' }); return; }
-  const gi = e.target.closest('.gi'); if (gi) { e.preventDefault(); const g = gal(); openLightbox(g, +gi.dataset.gi); return; }
+  const cat = e.target.closest('[data-cat]'); if (cat) { e.preventDefault(); setCat(cat.dataset.cat); window.cxGo($('#products'), true); return; }
+  const gi = e.target.closest('.gi'); if (gi) { if (isPdf(gi.getAttribute('href'))) return; e.preventDefault(); const g = gal(); openLightbox(g, +gi.dataset.gi); return; }
   const ty = e.target.closest('[data-type]'); if (ty) { const r = $$('#contact input[name=type]'); r.forEach(x => x.checked = x.value === ty.dataset.type); }
   const b = e.target.closest('.btn'); if (b) { const r = b.getBoundingClientRect(), s = document.createElement('span'); s.className = 'rp'; const d = Math.max(r.width, r.height); s.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d / 2}px;top:${e.clientY - r.top - d / 2}px`; b.appendChild(s); setTimeout(() => s.remove(), 600); }
 });
@@ -478,28 +545,37 @@ document.addEventListener('click', e => {
 const stars = n => `<span class="stars" role="img" aria-label="${n} / 5"><b>${'★'.repeat(n)}</b><i>${'★'.repeat(5 - n)}</i></span>`;
 const rvDate = d => { try { return new Date(d).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); } catch { return ''; } };
 const rvCard = (r, i) => `<div class="tc rv" data-r="up" style="--i:${i % 3}">${stars(r.rating)}<p class="rvt">${esc(r.text)}</p><div class="au"><b>${esc(r.name)}</b><small>${esc(rvDate(r.date))}</small></div>${r.reply ? `<div class="rvr"><b>${u('rvShopReply')}</b><span>${esc(r.reply)}</span></div>` : ''}</div>`;
-const RV_SHOW = 6;
+const testiCard = (t, i) => `<div class="tc" data-r="up" style="--i:${i % 3}"><div class="q">“</div><p>${bi(t.textTa, t.textEn)}</p><div class="au"><b>${esc(t.name)}</b><small>${esc(t.role)}</small></div></div>`;
+/* newest first: the review (or shop-added comment) that came last is shown first; "featured" ones stay on top */
+function rvList() {
+  const items = [];
+  (C.testimonials || []).forEach((t, i) => items.push({ f: 0, t: Number(t.addedAt) || 0, i, html: testiCard(t, i) }));
+  (C.reviews || []).forEach((r, i) => items.push({ f: r.featured ? 1 : 0, t: Date.parse(r.date) || 0, i: 1e6 + i, html: rvCard(r, i) }));
+  return items.sort((a, b) => b.f - a.f || b.t - a.t || a.i - b.i).map(x => x.html);
+}
 function reviewsSection() {
-  const cur = C.testimonials || [], cust = (C.reviews || []).slice().sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0)), form = C.site.reviewForm !== false;
+  const cur = C.testimonials || [], cust = C.reviews || [], form = C.site.reviewForm !== false;
   if (!cur.length && !cust.length && !form) return '';
   const avg = cust.length ? cust.reduce((n, r) => n + r.rating, 0) / cust.length : 0;
   const sum = cust.length ? `<div class="rv-sum" data-r="up"><b>${avg.toFixed(1)}</b>${stars(Math.round(avg))}<span>${cust.length === 1 ? u('rvCount1') : esc(U.rvCount[0].replace('{n}', cust.length)) + ' · ' + esc(U.rvCount[1].replace('{n}', cust.length))}</span></div>` : '';
-  const cards = cur.map((t, i) => `<div class="tc" data-r="up" style="--i:${i % 3}"><div class="q">“</div><p>${bi(t.textTa, t.textEn)}</p><div class="au"><b>${esc(t.name)}</b><small>${esc(t.role)}</small></div></div>`).join('')
-    + cust.map((r, i) => `<div${i >= RV_SHOW ? ' hidden data-rvx' : ''} style="display:contents">${rvCard(r, i)}</div>`).join('');
-  const more = cust.length > RV_SHOW ? `<div class="rv-act"><button type="button" class="btn ghost" data-rv-more>${u('rvMore')}</button></div>` : '';
-  const write = form ? `<div class="rv-act"><button type="button" class="btn gold" data-rv-open>★ ${u('writeReview')}</button></div>` : '';
-  const empty = !cur.length && !cust.length ? `<p class="rv-none" data-r="up">${u('rvNone')}</p>` : '';
-  return sec('testimonials', head(u('reviewsTitle'), '', 'eyReviews'), sum + (cards ? `<div class="testi">${cards}</div>` : '') + empty + more + write);
+  const all = rvList(), N = Math.floor(Number(C.site.reviewsHomeCount)), shown = N > 0 ? all.slice(0, N) : all;
+  const more = all.length > shown.length ? `<div class="rv-act"><button type="button" class="btn gold big" data-lp="reviews"><span class="t">★ ${u('seeAllReviews')} <i>›</i></span></button></div>` : '';
+  const write = form ? `<div class="rv-act"><button type="button" class="btn rv-write" data-rv-open><span class="t"><i>★</i> ${u('writeReview')}</span></button></div>` : '';
+  const empty = !all.length ? `<p class="rv-none" data-r="up">${u('rvNone')}</p>` : '';
+  return sec('testimonials', head(u('reviewsTitle'), '', 'eyReviews'), sum + (shown.length ? `<div class="testi">${shown.join('')}</div>` : '') + empty + more + write);
 }
 let rvOpened = 0;
+const RV_MAX = 500;
+const RV_WORDS = [['😞', 'மோசம்', 'Poor'], ['😐', 'சுமார்', 'Fair'], ['🙂', 'நன்று', 'Good'], ['😀', 'மிக நன்று', 'Very good'], ['🤩', 'அருமை', 'Excellent']];
 function openReview() {
   rvOpened = Date.now();
-  $('#rvBody').innerHTML = `<div class="formcard"><h3>${u('rvFormTitle')}</h3><form id="rvForm" novalidate autocomplete="off">
+  $('#rvBody').innerHTML = `<div class="formcard rvf"><div class="rvf-top"><span class="rvf-ic">★</span><h3>${u('rvFormTitle')}</h3></div><form id="rvForm" novalidate autocomplete="off">
     <label class="rvl" for="rvName">${u('rvYourName')}</label><input id="rvName" name="name" maxlength="60" autocomplete="name">
-    <span class="rvl">${u('rvYourRating')}</span><div class="rv-pick" role="radiogroup" aria-label="${esc(U.rvYourRating[1])}">${[1, 2, 3, 4, 5].map(n => `<button type="button" role="radio" aria-checked="false" aria-label="${n}" data-star="${n}">★</button>`).join('')}</div>
-    <label class="rvl" for="rvText">${u('rvYourText')}</label><textarea id="rvText" name="text" rows="4" maxlength="800"></textarea>
+    <span class="rvl">${u('rvYourRating')}</span><div class="rv-pick" role="radiogroup" aria-label="${esc(U.rvYourRating[1])}">${[1, 2, 3, 4, 5].map(n => `<button type="button" role="radio" aria-checked="false" aria-label="${n}" data-star="${n}">★</button>`).join('')}</div><div class="rv-word" id="rvWord" aria-live="polite"></div>
+    <label class="rvl" for="rvText">${u('rvYourText')}</label><textarea id="rvText" name="text" rows="4" maxlength="${RV_MAX}"></textarea>
+    <div class="rv-cnt"><span class="rv-bar"><i id="rvBar"></i></span><span id="rvCnt">0 / ${RV_MAX}</span></div>
     <input class="rv-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
-    <p class="rv-msg" id="rvMsg" role="alert"></p><button class="btn gold" type="submit" id="rvSend">${u('rvSend')}</button></form></div>`;
+    <p class="rv-msg" id="rvMsg" role="alert"></p><button class="btn rv-send" type="submit" id="rvSend"><span class="t">➤ ${u('rvSend')}</span></button></form></div>`;
   closeModals(); $('#rvModal').classList.add('open'); setTimeout(() => { const n = $('#rvName'); if (n) n.focus(); }, 80);
 }
 const rvErr = k => { const e = U[k] || U.rvErr; return e[0] + ' / ' + e[1]; };
@@ -508,7 +584,7 @@ async function submitReviewForm(f) {
   msg.className = 'rv-msg';
   if (name.length < 2) { msg.textContent = rvErr('rvErrName'); return; }
   if (!val) { msg.textContent = rvErr('rvErrRating'); return; }
-  if (text.length < 10) { msg.textContent = rvErr('rvErrText'); return; }
+  if (text.length < 1 || text.length > RV_MAX) { msg.textContent = rvErr('rvErrText'); return; }
   const btn = $('#rvSend'); btn.disabled = true;
   try {
     const r = await fetch('/api/review', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, text, rating: +val.dataset.star, website: f.website.value, t: Date.now() - rvOpened }) });
@@ -522,15 +598,16 @@ async function submitReviewForm(f) {
 document.addEventListener('click', e => {
   if (e.target.closest('[data-rv-open]')) { e.preventDefault(); openReview(); return; }
   const m = e.target.closest('[data-rv-more]'); if (m) { $$('[data-rvx]').forEach(x => x.hidden = false); m.closest('.rv-act').remove(); return; }
-  const st = e.target.closest('[data-star]'); if (st) { const n = +st.dataset.star; $$('[data-star]', st.parentNode).forEach(b => { const on = +b.dataset.star <= n; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(+b.dataset.star === n)); }); }
+  const st = e.target.closest('[data-star]'); if (st) { const n = +st.dataset.star; $$('[data-star]', st.parentNode).forEach(b => { const on = +b.dataset.star <= n; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(+b.dataset.star === n)); }); const w = RV_WORDS[n - 1], el = $('#rvWord'); if (el) { el.innerHTML = `<b>${w[0]}</b> ${bi(w[1], w[2])}`; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); } }
 });
 document.addEventListener('submit', e => { if (e.target.id === 'rvForm') { e.preventDefault(); submitReviewForm(e.target); } });
+document.addEventListener('input', e => { if (e.target.id !== 'rvText') return; const n = e.target.value.length, c = $('#rvCnt'), b = $('#rvBar'); if (c) { c.textContent = n + ' / ' + RV_MAX; c.classList.toggle('warn', n >= RV_MAX - 40); } if (b) b.style.width = Math.min(100, n / RV_MAX * 100) + '%'; });
 
 let lastY = scrollY, ticking = false;
 let fabT = 0;
 function onScroll() {
   ticking = false;
-  if (innerWidth < 760) { const f = $('.fab'); if (f) { f.classList.add('away'); clearTimeout(fabT); fabT = setTimeout(() => f.classList.remove('away'), 650); } }
+  if (C && C.site.waAutoHide === true && innerWidth < 760) { const f = $('.fab'); if (f) { f.classList.add('away'); clearTimeout(fabT); fabT = setTimeout(() => f.classList.remove('away'), 650); } }
   const y = scrollY, h = document.documentElement.scrollHeight - innerHeight, root = document.documentElement;
   $('#progress').style.width = (h > 0 ? y / h * 100 : 0) + '%';
   const t = $('#top'); if (t) t.classList.toggle('scrolled', y > 10); const up = $('#toTop'); if (up) up.classList.toggle('show', y > 600);
@@ -547,15 +624,17 @@ function loadContent() {
 }
 async function boot() {
   try { const s = localStorage.getItem('cx-lang'); if (['both', 'ta', 'en'].includes(s)) document.body.dataset.lang = s; } catch {}
-  const t0 = Date.now();
+  const t0 = Date.now(), sp = $('#splash');
+  const hideSplash = () => { if (!sp || sp.classList.contains('out')) return; sp.classList.add('out'); setTimeout(() => { sp.style.display = 'none'; }, 900); };
+  setTimeout(hideSplash, 10000); /* safety: the loading screen can never stay forever */
   try { C = await loadContent(); }
-  catch { $('#splash').innerHTML = '<p style="text-align:center;padding:0 24px">Could not load the website. Please check your connection and refresh.</p>'; return; }
-  try { await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1500))]); } catch {}
-  renderAll(false);
-  setTimeout(() => $('#splash').classList.add('out'), Math.max(0, 600 - (Date.now() - t0)));
+  catch { sp.innerHTML = '<div style="text-align:center;padding:0 24px"><p style="margin:0 0 16px;font-size:16px">Could not load the website. Please check your connection and try again.</p><button onclick="location.reload()" style="background:#c8902e;color:#fff;border:0;border-radius:99px;padding:12px 28px;font:700 16px inherit;cursor:pointer">Try again</button></div>'; return; }
+  try { renderAll(false); } catch (e) { console.error(e); }
+  setTimeout(hideSplash, Math.max(0, 350 - (Date.now() - t0)));
   const oh = location.hash.match(/^#offer-(.+)$/);
   if (oh) { try { history.replaceState({ op: null }, '', location.pathname); history.pushState({ op: 1 }, '', location.hash || '#offer-' + oh[1]); } catch {} openOffer(decodeURIComponent(oh[1]), true); }
-  else { let el = null; try { el = location.hash && $(location.hash); } catch {} if (el) setTimeout(() => el.scrollIntoView(), 700); }
+  else { let el = null; try { el = location.hash && $(location.hash); } catch {} if (el) setTimeout(() => window.cxGo(el, false), 700); }
+  const lh = location.hash.match(/^#all-(offers|gallery|reviews)$/); if (lh) { try { history.replaceState({ lp: null }, '', location.pathname); history.pushState({ lp: lh[1] }, '', '#all-' + lh[1]); } catch {} openList(lh[1], true); }
   visitCount();
 }
 function visitCount() {
@@ -565,4 +644,32 @@ function visitCount() {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) hit('ping'); });
 }
 boot();
+})();
+
+/* ---- Menu / section links: land exactly on the section, below the sticky header ---------------------------
+   The header height is measured live; the position is corrected again while images and animations settle,
+   so a menu tap never ends up in the wrong place. */
+(function () {
+  const hdr = () => { const h = document.getElementById('top'); return h ? h.getBoundingClientRect().height : 0; };
+  const setVar = () => { document.documentElement.style.setProperty('--hdr-h', Math.ceil(hdr()) + 'px'); };
+  const absTop = el => { let y = 0; for (let n = el; n; n = n.offsetParent) y += n.offsetTop; return y; };   /* ignores animation transforms */
+  let token = 0;
+  ['wheel', 'touchstart', 'keydown'].forEach(ev => addEventListener(ev, () => { token++; }, { passive: true }));
+  const target = el => Math.max(0, Math.round(absTop(el) - hdr() - 6));
+  window.cxGo = function (el, smooth) {
+    if (!el) return; setVar();
+    const my = ++token;
+    scrollTo({ top: target(el), behavior: smooth ? 'smooth' : 'auto' });
+    [450, 1000, 1900].forEach(ms => setTimeout(() => { if (token !== my) return; const t = target(el); if (Math.abs(scrollY - t) > 3) scrollTo({ top: t, behavior: 'auto' }); }, ms));
+  };
+  addEventListener('resize', setVar); addEventListener('orientationchange', setVar); addEventListener('load', setVar); setTimeout(setVar, 300); setTimeout(setVar, 1500);
+  document.addEventListener('click', e => {
+    const a = e.target.closest && e.target.closest('a[href^="#"]'); if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey) return;
+    const id = (a.getAttribute('href') || '').slice(1); if (!id) return;
+    if (a.getAttributeNames().some(n => n.startsWith('data-') && n !== 'data-nav')) return;   /* product / offer / category links keep their own behaviour */
+    let el = null; try { el = document.getElementById(id); } catch { /* ignore */ }
+    if (!el) return;
+    e.preventDefault();
+    setTimeout(() => { window.cxGo(el, true); try { history.replaceState(history.state, '', '#' + id); } catch { /* ignore */ } }, 80);   /* after the mobile drawer has closed */
+  }, true);
 })();

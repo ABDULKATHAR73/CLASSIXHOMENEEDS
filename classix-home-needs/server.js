@@ -16,7 +16,9 @@ const fsp = fs.promises;
 const path = require('path');
 const crypto = require('crypto');
 const zlib = require('zlib');
+const { Worker } = require('worker_threads');
 const T = require('./lib/typography');
+const { isHeic } = require('./lib/heic');
 
 /* ------------------------------------------------------------------ config */
 const ROOT = __dirname;
@@ -34,6 +36,8 @@ const PUBLIC_URL = String(process.env.PUBLIC_URL || '').trim().replace(/\/+$/, '
 const SITE_URL = PUBLIC_URL ? PUBLIC_URL + '/' : '/';
 const FORCE_HTTPS = process.env.FORCE_HTTPS === '1';   // redirect http -> https (needs TRUST_PROXY=1 behind a proxy)
 const IS_PROD = process.env.NODE_ENV === 'production';
+const DEFAULT_LOGO = '/uploads/classix-logo.png';      /* shop logo used until the owner uploads another one */
+const OLD_DEFAULT_LOGO = '/uploads/logo.jpg';
 
 let ADMIN_PATH = String(process.env.ADMIN_PATH || '/admin').trim().replace(/\/+$/, '');
 if (!ADMIN_PATH.startsWith('/')) ADMIN_PATH = '/' + ADMIN_PATH;
@@ -43,25 +47,29 @@ if (ADMIN_PATH === '' || ['/', '/api', '/assets', '/uploads', '/robots.txt'].inc
 }
 
 const MAX_JSON = 6 * 1024 * 1024;
-const MAX_UPLOAD = 10 * 1024 * 1024;
+const MAX_UPLOAD = 12 * 1024 * 1024; /* 12 MB per file (phone HEIC photos are converted + shrunk on the server) */
 const MAX_BACKUP_UPLOAD = 100 * 1024 * 1024;
 const SESSION_MS = 12 * 60 * 60 * 1000;
 const KEEP_BACKUPS = 40;
+const APP_VERSION = (() => { try { return require('./package.json').version; } catch { return ''; } })();
 
 /* ----------------------------------------------------------------- helpers */
 const MIME = {
-  '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'application/javascript; charset=utf-8',
+  '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.mjs': 'application/javascript; charset=utf-8', '.pfb': 'application/octet-stream', '.ttf': 'font/ttf',
   '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.ico': 'image/x-icon', '.txt': 'text/plain; charset=utf-8'
+  '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.ico': 'image/x-icon', '.pdf': 'application/pdf', '.txt': 'text/plain; charset=utf-8'
 };
 const TEXTY = new Set(['.html', '.css', '.js', '.json', '.svg', '.txt']);
 const escHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const exists = async p => { try { await fsp.access(p); return true; } catch { return false; } };
 
+/* Supabase mirror: keeps all data safe outside the host's disk (see SUPABASE-SETUP.md). Inactive unless SUPABASE_URL + SUPABASE_SERVICE_KEY are set. */
+const cloud = require('./lib/cloud')({ dataDir: DATA_DIR, afterPull: async () => { await loadContent(); await loadReviews(); await loadAuth(); loadStats(); } });
 async function writeJSONAtomic(file, obj) {
   const tmp = file + '.' + process.pid + '.' + Date.now() + '.tmp';
   await fsp.writeFile(tmp, JSON.stringify(obj, null, 1), 'utf8');
   await fsp.rename(tmp, file);
+  cloud.schedule();
 }
 let chain = Promise.resolve();
 const serialize = fn => { const p = chain.then(fn, fn); chain = p.catch(() => {}); return p; };
@@ -69,14 +77,24 @@ const serialize = fn => { const p = chain.then(fn, fn); chain = p.catch(() => {}
 function baseHeaders(extra = {}) {
   return { 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin', ...extra };
 }
+/* Compressed copies are made once and kept (key = what the file/page is), so every visit after the first is instant. */
+const zCache = new Map();
+function zKey(h, buf) { return h.ETag ? h.ETag + '|' + buf.length : null; }
+function zGet(kind, key, buf) {
+  const k = key && kind + '|' + key; if (k && zCache.has(k)) return zCache.get(k);
+  const z = kind === 'br' ? zlib.brotliCompressSync(buf, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: key ? 9 : 4, [zlib.constants.BROTLI_PARAM_SIZE_HINT]: buf.length } }) : zlib.gzipSync(buf, { level: key ? 9 : 6 });
+  if (k) { if (zCache.size > 200) zCache.delete(zCache.keys().next().value); zCache.set(k, z); }
+  return z;
+}
 function send(req, res, status, body, headers = {}) {
   const buf = Buffer.isBuffer(body) ? body : Buffer.from(String(body ?? ''), 'utf8');
   const h = baseHeaders(headers);
   const type = String(h['Content-Type'] || '');
   const compressible = /text\/|json|javascript|svg/.test(type);
-  if (compressible && buf.length > 900 && /\bgzip\b/.test(req.headers['accept-encoding'] || '')) {
-    const z = zlib.gzipSync(buf);
-    h['Content-Encoding'] = 'gzip'; h['Vary'] = 'Accept-Encoding'; h['Content-Length'] = z.length;
+  const ae = String(req.headers['accept-encoding'] || '');
+  if (compressible && buf.length > 900 && /\b(br|gzip)\b/.test(ae)) {
+    const kind = /\bbr\b/.test(ae) ? 'br' : 'gzip', z = zGet(kind, zKey(h, buf), buf);
+    h['Content-Encoding'] = kind; h['Vary'] = 'Accept-Encoding'; h['Content-Length'] = z.length;
     res.writeHead(status, h); res.end(req.method === 'HEAD' ? undefined : z); return;
   }
   h['Content-Length'] = buf.length;
@@ -88,7 +106,8 @@ const sendJSON = (req, res, status, obj, extra = {}) => send(req, res, status, J
 function readBody(req, limit) {
   return new Promise((resolve, reject) => {
     const chunks = []; let n = 0;
-    req.on('data', c => { n += c.length; if (n > limit) { reject(Object.assign(new Error('Too large'), { status: 413 })); req.destroy(); } else chunks.push(c); });
+    let over = false;
+    req.on('data', c => { if (over) return; n += c.length; if (n > limit) { over = true; chunks.length = 0; reject(Object.assign(new Error('Too large'), { status: 413 })); req.resume(); } else chunks.push(c); });
     req.on('end', () => resolve(Buffer.concat(chunks)));
     req.on('error', reject);
   });
@@ -105,6 +124,15 @@ async function serveFile(req, res, file, { cache = 'no-cache', fallbackStatus = 
   const etag = '"' + st.size.toString(16) + '-' + Math.round(st.mtimeMs).toString(16) + '"';
   const headers = { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': cache, ETag: etag };
   if (req.headers['if-none-match'] === etag) { res.writeHead(304, baseHeaders({ ETag: etag, 'Cache-Control': cache })); return res.end(); }
+  if (!TEXTY.has(ext) && st.size > 200 * 1024) {      /* photos / PDFs: stream them (supports Range for PDFs and iOS) */
+    const m = /^bytes=(\d*)-(\d*)$/.exec(String(req.headers.range || ''));
+    let start = 0, end = st.size - 1, code = 200;
+    if (m && (m[1] || m[2])) { if (m[1]) { start = +m[1]; if (m[2]) end = Math.min(end, +m[2]); } else { start = Math.max(0, st.size - +m[2]); } if (start > end || start >= st.size) { res.writeHead(416, baseHeaders({ 'Content-Range': 'bytes */' + st.size })); return res.end(); } code = 206; headers['Content-Range'] = `bytes ${start}-${end}/${st.size}`; }
+    headers['Accept-Ranges'] = 'bytes'; headers['Content-Length'] = end - start + 1;
+    res.writeHead(code, baseHeaders(headers));
+    if (req.method === 'HEAD') return res.end();
+    const rs = fs.createReadStream(file, { start, end }); rs.on('error', () => res.destroy()); res.on('close', () => rs.destroy()); rs.pipe(res); return;
+  }
   const data = await fsp.readFile(file);
   send(req, res, 200, data, headers);
 }
@@ -130,10 +158,12 @@ function normalize(c) {
   o.v = Number(c && c.v) || 1;
   for (const k of ['shop', 'site', 'social']) o[k] = { ...(d[k] || {}), ...((c && typeof c[k] === 'object' && c[k]) || {}) };
   o.social.whatsappGroup = cleanWaGroup(o.social.whatsappGroup);
+  o.social.whatsappGroupOn = !(o.social.whatsappGroupOn === false || o.social.whatsappGroupOn === 'false' || o.social.whatsappGroupOn === 0);   /* ON by default; old data keeps working */
   if (o.site.typo) o.site.typo = T.sanitize(o.site);
   for (const k of ['categories', 'slides', 'offers', 'why', 'stats', 'strips', 'galleryCategories', 'gallery', 'products', 'testimonials']) {
     o[k] = Array.isArray(c && c[k]) ? c[k] : [];
   }
+  o.offers = o.offers.map(x => offerV7(x, o.products));
   { const seen = new Set(); for (const x of o.offers) { if (!x || typeof x !== 'object') continue; let id = String(x.id || '').replace(/[^\w-]/g, ''); if (!id || seen.has(id)) id = 'o' + crypto.randomBytes(4).toString('hex'); seen.add(id); x.id = id; } }
   for (const k of ['phones', 'address', 'hours']) if (!Array.isArray(o.shop[k])) o.shop[k] = o.shop[k] ? [String(o.shop[k])] : [];
   if (!o.shop.phones.length) o.shop.phones = [''];
@@ -155,13 +185,29 @@ async function externalize(v) {
 function sniff(buf) {
   if (buf.length > 12 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'jpg';
   if (buf.length > 12 && buf.slice(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'png';
+  if (buf.length > 12 && buf.slice(0, 5).toString('latin1') === '%PDF-') return 'pdf';
+  if (buf.length > 12 && buf.slice(0, 4).toString('latin1') === 'GIF8') return 'gif';
+  if (buf.length > 12 && buf.slice(0, 4).toString('latin1') === 'RIFF' && buf.slice(8, 12).toString('latin1') === 'WEBP') return 'webp';
   return null;
+}
+/* HEIC/HEIF -> JPEG in a worker thread (never blocks the website) */
+function convertHeic(buf) {
+  return new Promise((resolve, reject) => {
+    let done = false, w;
+    const fin = (fn, v) => { if (done) return; done = true; clearTimeout(t); try { w && w.terminate(); } catch { /* ignore */ } fn(v); };
+    const t = setTimeout(() => fin(reject, new Error('Converting the HEIC photo took too long.')), 90000);
+    try { w = new Worker(path.join(ROOT, 'lib', 'heic-worker.js'), { workerData: { buf, opt: { maxSide: 1800, quality: 84 } }, resourceLimits: { maxOldGenerationSizeMb: 768 } }); }
+    catch (e) { return fin(reject, e); }
+    w.once('message', m => m && m.ok ? fin(resolve, Buffer.from(m.buf)) : fin(reject, new Error((m && m.error) || 'Could not read this HEIC photo')));
+    w.once('error', e => fin(reject, e));
+    w.once('exit', c => fin(reject, new Error('The HEIC converter stopped (code ' + c + ')')));
+  });
 }
 async function saveImage(buf) {
   const ext = sniff(buf); if (!ext) return null;
   const name = crypto.createHash('sha256').update(buf).digest('hex').slice(0, 24) + '.' + ext;
   const file = path.join(UPLOAD_DIR, name);
-  if (!(await exists(file))) { const tmp = file + '.tmp'; await fsp.writeFile(tmp, buf); await fsp.rename(tmp, file); }
+  if (!(await exists(file))) { const tmp = file + '.tmp'; await fsp.writeFile(tmp, buf); await fsp.rename(tmp, file); cloud.schedule(1500); }
   return { name, url: '/uploads/' + name };
 }
 
@@ -186,8 +232,37 @@ function validate(c) {
   return null;
 }
 
+/* One-time upgrade of data saved by older versions (a backup copy is made first).
+   v6: new default logo, and newest-first order for offers and gallery photos. */
+const MIGRATION = 7;
+/* v7 offers: one clean structure (theme, tagline, price + old price, items with photo / qty / price, terms, countdown) */
+const OFFER_THEMES = ['special', 'diwali', 'pongal', 'puthandu', 'christmas', 'eid', 'newyear', 'sale', 'wholesale', 'new', 'gift'];
+function offerV7(o, products) {
+  if (!o || typeof o !== 'object') return o;
+  if (o.v7) return o;
+  const s = v => (v == null ? '' : String(v));
+  let items = (Array.isArray(o.plist) ? o.plist : []).filter(x => x && (x.ta || x.en || x.img)).map(x => ({ ta: s(x.ta), en: s(x.en), img: s(x.img), qty: 1, price: '', note: '' }));
+  if (!items.length && Array.isArray(o.includes)) items = o.includes.filter(Boolean).map(x => ({ ta: '', en: s(x), img: '', qty: 1, price: '', note: '' }));
+  if (!items.length && Array.isArray(o.items)) items = o.items.map(it => { const p = (products || []).find(x => x.id === it.id); return p ? { ta: s(p.nameTa), en: s(p.name), img: s((p.images || [])[0]), qty: Math.max(1, Math.round(Number(it.qty) || 1)), price: it.price === '' || it.price == null ? '' : Number(it.price), note: '' } : null; }).filter(Boolean);
+  const th = OFFER_THEMES.includes(o.festival) ? o.festival : (OFFER_THEMES.includes(o.badge && String(o.badge).toLowerCase()) ? String(o.badge).toLowerCase() : 'special');
+  return { v7: true, id: o.id, active: o.active !== false, theme: th, badge: s(o.badge), titleTa: s(o.titleTa), titleEn: s(o.titleEn), tagTa: s(o.textTa), tagEn: s(o.textEn),
+    image: s(o.image), photos: Array.isArray(o.photos) ? o.photos.filter(Boolean) : [], startDate: s(o.startDate), endDate: s(o.endDate), timer: true,
+    price: o.bundlePrice === '' || o.bundlePrice == null ? '' : Number(o.bundlePrice), oldPrice: '', items, detailsTa: s(o.detailsTa), detailsEn: s(o.detailsEn), termsTa: '', termsEn: '',
+    ctaTa: s(o.ctaTa), ctaEn: s(o.ctaEn), link: s(o.link), wa: true, addedAt: Number(o.addedAt) || 0 };
+}
+async function migrateRaw(raw) {
+  if (!raw || typeof raw !== 'object' || !raw.site) return raw;
+  if ((Number(raw.site.mig) || 0) >= MIGRATION) return raw;
+  try { await fsp.copyFile(CONTENT_FILE, path.join(BACKUP_DIR, `content-before-upgrade-${Date.now()}.json`)); } catch { /* first start */ }
+  if (!raw.site.logo || raw.site.logo === OLD_DEFAULT_LOGO) { raw.site.logo = DEFAULT_LOGO; raw.site.uiLogoText = false; }
+  if ((Number(raw.site.mig) || 0) < 6) { if (Array.isArray(raw.offers)) raw.offers.reverse(); if (Array.isArray(raw.gallery)) raw.gallery.reverse(); }
+  if (Array.isArray(raw.offers)) raw.offers = raw.offers.map(o => offerV7(o, raw.products));
+  raw.site.mig = MIGRATION;
+  await writeJSONAtomic(CONTENT_FILE, raw);
+  return raw;
+}
 async function loadContent() {
-  try { content = normalize(JSON.parse(await fsp.readFile(CONTENT_FILE, 'utf8'))); }
+  try { content = normalize(await migrateRaw(JSON.parse(await fsp.readFile(CONTENT_FILE, 'utf8')))); }
   catch (e) { console.error('Could not read content.json, using starter content:', e.message); content = normalize(SEED); }
 }
 async function backupCurrent() {
@@ -215,7 +290,7 @@ async function referencedUploads() {
     else if (Array.isArray(v)) v.forEach(scan);
     else if (v && typeof v === 'object') Object.values(v).forEach(scan);
   };
-  scan(content);
+  scan(content); refs.add(DEFAULT_LOGO.slice(9));
   for (const f of await fsp.readdir(BACKUP_DIR).catch(() => [])) {
     try { scan(JSON.parse(await fsp.readFile(path.join(BACKUP_DIR, f), 'utf8'))); } catch { /* ignore */ }
   }
@@ -314,7 +389,7 @@ function statsSummary() {
   return { live: liveN, today: agg(k => k === today), d7: agg(k => d7.has(k)), d30: agg(k => d30.has(k)), month: agg(k => k.startsWith(month)), total: { ...stats.total }, days, tz: TZ_MIN };
 }
 loadStats(); setInterval(saveStats, 10000).unref(); setInterval(() => { const n = Date.now(); for (const [k, v] of hitRate) if (n - v.t > 120000) hitRate.delete(k); }, 120000).unref();
-for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { saveStats(); process.exit(0); });
+for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { saveStats(); let done = false; const bye = () => { if (!done) { done = true; process.exit(0); } }; setTimeout(bye, 9500); cloud.flush(9000).then(bye, bye); });
 process.on('exit', saveStats);
 
 /* --------------------------- safe ZIP backup helpers (no dependencies) */
@@ -346,12 +421,12 @@ function readZip(buf) {
     const flags=buf.readUInt16LE(p+6), method=buf.readUInt16LE(p+8), crc=buf.readUInt32LE(p+14), csize=buf.readUInt32LE(p+18), usize=buf.readUInt32LE(p+22), nl=buf.readUInt16LE(p+26), el=buf.readUInt16LE(p+28);
     if (flags & 1) throw new Error('Encrypted ZIP files are not supported');
     const start=p+30, name=buf.subarray(start,start+nl).toString('utf8'); const dataStart=start+nl+el, dataEnd=dataStart+csize;
-    if (!name || name.startsWith('/') || name.includes('\\') || name.split('/').some(x => x === '..')) throw new Error('Unsafe ZIP path');
+    const unsafe = !name || name.startsWith('/') || name.includes('\\') || name.split('/').some(x => x === '..');   /* skipped, never fatal */
     if (dataEnd > buf.length || usize > MAX_BACKUP_UPLOAD) throw new Error('Invalid or oversized ZIP entry');
     const comp=buf.subarray(dataStart,dataEnd); let data;
     if (method===0) data=Buffer.from(comp); else if (method===8) data=zlib.inflateRawSync(comp); else throw new Error('Unsupported ZIP compression');
     if (data.length !== usize || crc32(data) !== crc) throw new Error('ZIP integrity check failed');
-    if (!name.endsWith('/')) { if (out.has(name)) throw new Error('Duplicate ZIP path'); out.set(name,data); }
+    if (!unsafe && !name.endsWith('/')) out.set(name,data);   /* a repeated name: the last one wins */
     p=dataEnd;
   }
   if (!out.size) throw new Error('No files found in ZIP');
@@ -362,12 +437,13 @@ const REVIEWS_FILE = path.join(DATA_DIR, 'reviews.json');
 let reviews = [];
 const RV_STATUS = ['pending', 'approved', 'hidden'];
 async function loadReviews() { try { const j = JSON.parse(await fsp.readFile(REVIEWS_FILE, 'utf8')); reviews = Array.isArray(j.items) ? j.items : []; } catch { reviews = []; } }
-const saveReviews = () => serialize(() => writeJSONAtomic(REVIEWS_FILE, { items: reviews }));
+let rvVer = 1;
+const saveReviews = () => { rvVer++; return serialize(() => writeJSONAtomic(REVIEWS_FILE, { items: reviews })); };
 const rvClean = (v, max) => String(v ?? '').replace(/<[^>]*>/g, ' ').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, max);
 const rvStar = v => Math.min(5, Math.max(1, Math.round(Number(v)) || 5));
 const rvDate = v => { const t = Date.parse(v); return Number.isFinite(t) ? new Date(t).toISOString() : new Date().toISOString(); };
 function publicReviews() {
-  return reviews.filter(r => r.status === 'approved').sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 80)
+  return reviews.filter(r => r.status === 'approved').sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0) || String(b.date).localeCompare(String(a.date))).slice(0, 120)
     .map(r => ({ id: r.id, name: r.name, rating: r.rating, text: r.text, date: r.date, reply: r.reply || '', featured: !!r.featured }));
 }
 const publicContent = () => ({ ...content, reviews: publicReviews() });
@@ -384,9 +460,9 @@ async function submitReview(req, res) {
   let b; try { b = await readJSON(req, 8192); } catch (e) { return sendJSON(req, res, e.status || 400, { error: 'Invalid request' }); }
   if (b.website || b.url) return sendJSON(req, res, 200, { ok: true, status: 'pending' });          // honeypot: pretend success
   if (Number(b.t) < 2500) return sendJSON(req, res, 200, { ok: true, status: 'pending' });          // submitted faster than a human can
-  const name = rvClean(b.name, 60), text = rvClean(b.text, 800), rating = Number(b.rating);
+  const name = rvClean(b.name, 60), text = rvClean(b.text, 500), rating = Number(b.rating);
   if (name.length < 2) return sendJSON(req, res, 400, { error: 'name' });
-  if (text.length < 10) return sendJSON(req, res, 400, { error: 'text' });
+  if (text.length < 1) return sendJSON(req, res, 400, { error: 'text' });
   if (!(rating >= 1 && rating <= 5)) return sendJSON(req, res, 400, { error: 'rating' });
   if (/https?:\/\/|www\./i.test(text + ' ' + name)) return sendJSON(req, res, 400, { error: 'links' });
   if (rvLimited(req)) return sendJSON(req, res, 429, { error: 'limit' });
@@ -413,24 +489,25 @@ async function reviewsAdmin(req, res, route, method) {
   if (route === '/reviews' && method === 'GET') return sendJSON(req, res, 200, { items: [...reviews].sort((a, b) => String(b.date).localeCompare(String(a.date))), pending: reviews.filter(r => r.status === 'pending').length });
   if (route === '/reviews' && method === 'POST') {
     const r = rvFromAdmin(await readJSON(req, 16384), { id: 'r' + crypto.randomBytes(6).toString('hex'), status: 'approved', source: 'admin', date: new Date().toISOString(), rating: 5, reply: '', featured: false });
-    if (!r.name || r.name.length < 2 || !r.text || r.text.length < 3) return sendJSON(req, res, 400, { error: 'Enter the customer name and the review text.' });
+    if (!r.name || r.name.length < 2 || !r.text || r.text.length < 1) return sendJSON(req, res, 400, { error: 'Enter the customer name and the review text.' });
     reviews.push(r); await saveReviews(); return sendJSON(req, res, 200, { ok: true, item: r });
   }
   const m = route.match(/^\/reviews\/(r[0-9a-f]{12})$/); if (!m) return null;
   const i = reviews.findIndex(r => r.id === m[1]); if (i < 0) return sendJSON(req, res, 404, { error: 'Review not found' });
   if (method === 'PUT') {
     const n = rvFromAdmin(await readJSON(req, 16384), reviews[i]);
-    if (!n.name || n.name.length < 2 || !n.text || n.text.length < 3) return sendJSON(req, res, 400, { error: 'Name and review text cannot be empty.' });
+    if (!n.name || n.name.length < 2 || !n.text || n.text.length < 1) return sendJSON(req, res, 400, { error: 'Name and review text cannot be empty.' });
     reviews[i] = n; await saveReviews(); return sendJSON(req, res, 200, { ok: true, item: n });
   }
   if (method === 'DELETE') { reviews.splice(i, 1); await saveReviews(); return sendJSON(req, res, 200, { ok: true }); }
   return sendJSON(req, res, 405, { error: 'Method not allowed' });
 }
 
-async function fullBackupZip() {
+async function fullBackupZip(includeAuth) {
   const entries=[];
   const add=async (file, name) => { if (await exists(file)) entries.push({name, data: await fsp.readFile(file)}); };
   await add(CONTENT_FILE,'data/content.json'); await add(STATS_FILE,'data/stats.json'); await add(REVIEWS_FILE,'data/reviews.json');
+  if (includeAuth) await add(AUTH_FILE,'data/admin.json');   /* optional: admin username + password HASHES (never plain passwords) */
   for (const dir of [UPLOAD_DIR, BACKUP_DIR]) {
     if (!(await exists(dir))) continue;
     for (const f of await fsp.readdir(dir)) {
@@ -438,7 +515,8 @@ async function fullBackupZip() {
       const fp=path.join(dir,f); if ((await fsp.stat(fp)).isFile()) entries.push({name:(dir===UPLOAD_DIR?'data/uploads/':'data/backups/')+f,data:await fsp.readFile(fp)});
     }
   }
-  entries.push({name:'BACKUP-INFO.txt',data:'Classic Home Needs full data backup. Includes content, uploaded images, visitor statistics and content-version backups. For security, admin password/session secrets are NOT included. Restore using Admin > Backup & Security > Restore full ZIP backup.\n'});
+  entries.push({name:'manifest.json',data:JSON.stringify({app:'classix-home-needs',appVersion:APP_VERSION,backupFormat:2,created:new Date().toISOString(),includesAdminLogin:!!includeAuth},null,1)});
+  entries.push({name:'BACKUP-INFO.txt',data:'Classic Home Needs full data backup. Includes ALL website content and settings (shop details, offers, products, gallery, social links, WhatsApp group switch, typography, menu), every uploaded photo/PDF, customer reviews, visitor statistics and content-version backups.'+(includeAuth?' It ALSO contains the admin login (username + hashed passwords) - keep this ZIP private.':' The admin login is NOT included (a restore keeps the current admin password).')+' Restore: Admin > Backup & Security > Restore full backup (.zip) - works on this site or on a brand-new copy of the website.\n'});
   return makeZip(entries);
 }
 
@@ -510,14 +588,19 @@ async function adminApi(req, res, route) {
   }
 
   if (route === '/upload' && method === 'POST') {
-    const buf = await readBody(req, MAX_UPLOAD);
+    let buf; try { buf = await readBody(req, MAX_UPLOAD); } catch (e) { if (e.status === 413) return sendJSON(req, res, 413, { error: 'File is too big. The maximum size is 12 MB per file.' }); throw e; }
+    if (!buf.length) return sendJSON(req, res, 400, { error: 'The file is empty.' });
+    if (isHeic(buf)) {
+      try { buf = await convertHeic(buf); }
+      catch (e) { console.error('HEIC conversion failed:', e.message); return sendJSON(req, res, 422, { error: 'This HEIC photo could not be converted. Please set the phone camera to "Most Compatible" (JPEG) or try another photo.', heicFail: true }); }
+    }
     const saved = await saveImage(buf);
-    if (!saved) return sendJSON(req, res, 400, { error: 'Only PNG or JPEG images are allowed' });
+    if (!saved) return sendJSON(req, res, 400, { error: 'This file type is not allowed. Please use JPG, PNG, HEIC or PDF.' });
     return sendJSON(req, res, 200, { ok: true, url: saved.url });
   }
 
   if (route === '/backup/export' && method === 'GET') {
-    const zip = await fullBackupZip();
+    const zip = await fullBackupZip(new URL(req.url, 'http://x').searchParams.get('auth') === '1');
     const d = new Date();
     const stamp = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}-${String(d.getMinutes()).padStart(2,'0')}-${String(d.getSeconds()).padStart(2,'0')}`;
     return send(req, res, 200, zip, { 'Content-Type': 'application/zip', 'Content-Disposition': `attachment; filename="classix-home-needs-full-backup-${stamp}.zip"`, ...NO_STORE });
@@ -526,21 +609,38 @@ async function adminApi(req, res, route) {
     const ct=String(req.headers['content-type']||''); if (!/application\/zip|application\/octet-stream/i.test(ct)) return sendJSON(req,res,415,{error:'Upload a ZIP backup file.'});
     const raw=await readBody(req,MAX_BACKUP_UPLOAD); let files;
     try { files=readZip(raw); } catch(e) { return sendJSON(req,res,400,{error:'Invalid backup ZIP: '+e.message}); }
-    const contentBuf=files.get('data/content.json'); if (!contentBuf) return sendJSON(req,res,400,{error:'This ZIP does not contain data/content.json and is not a full website backup.'});
-    let incoming; try { incoming=JSON.parse(contentBuf.toString('utf8')); } catch { return sendJSON(req,res,400,{error:'Backup content is not valid JSON.'}); }
-    const normalized=normalize(incoming), validation=validate(normalized); if (validation) return sendJSON(req,res,400,{error:'Backup content failed validation: '+validation});
+    /* Tolerant restore: accepts backups from any version, with or without a wrapping folder; never fails on small differences. */
+    { const names=[...files.keys()]; const hit=names.find(n=>/(^|\/)data\/content\.json$/.test(n)) || names.find(n=>/(^|\/)content\.json$/.test(n));
+      if (hit) { const pre=hit.replace(/data\/content\.json$|content\.json$/,''); const m=new Map();
+        for (const [n,d] of files) { let r=pre&&n.startsWith(pre)?n.slice(pre.length):n; if (!r.startsWith('data/') && /^(content|stats|reviews|admin)\.json$|^(uploads|backups)\//.test(r)) r='data/'+r; m.set(r,d); }
+        files=m; } }
+    const contentBuf=files.get('data/content.json'); if (!contentBuf) return sendJSON(req,res,400,{error:'This ZIP does not contain content.json, so it is not a website backup.'});
+    let incoming; try { incoming=JSON.parse(contentBuf.toString('utf8').replace(/^\uFEFF/,'')); } catch { return sendJSON(req,res,400,{error:'The backup content file is damaged (not valid JSON).'}); }
+    const warnings=[]; let normalized, validation;
+    try { normalized=normalize(incoming); validation=validate(normalized); } catch(e) { validation='unreadable ('+e.message+')'; }
+    if (validation) {   /* backup from an older/newer version: fill the gaps from the default content and try again */
+      try {
+        const merged={...SEED,...incoming};
+        for (const k of Object.keys(SEED)) if (SEED[k]&&typeof SEED[k]==='object'&&!Array.isArray(SEED[k])&&incoming[k]&&typeof incoming[k]==='object'&&!Array.isArray(incoming[k])) merged[k]={...SEED[k],...incoming[k]};
+        normalized=normalize(merged); validation=validate(normalized); if (!validation) warnings.push('Some settings were missing in the backup and were filled with defaults.');
+      } catch(e) { validation=validation||e.message; }
+    }
+    if (validation) return sendJSON(req,res,400,{error:'The backup could not be read: '+validation});
     // Preserve the current state before applying anything; password file is intentionally never restored.
     await backupCurrent();
-    const oldZip=await fullBackupZip(); await fsp.writeFile(path.join(BACKUP_DIR,`pre-restore-${Date.now()}.zip`),oldZip).catch(()=>{});
-    const incomingUploads=[...files.entries()].filter(([n])=>n.startsWith('data/uploads/') && n.length>'data/uploads/'.length);
-    for (const [name,data] of incomingUploads) {
-      const base=name.slice('data/uploads/'.length);
-      if (!/^[A-Za-z0-9._-]+$/.test(base) || base==='.' || base==='..') return sendJSON(req,res,400,{error:'Unsafe upload filename in backup.'});
-      if (!sniff(data)) return sendJSON(req,res,400,{error:'Backup contains a non-JPEG/PNG upload.'});
+    const oldZip=await fullBackupZip(true); await fsp.writeFile(path.join(BACKUP_DIR,`pre-restore-${Date.now()}.zip`),oldZip).catch(()=>{});
+    try { const pre=(await fsp.readdir(BACKUP_DIR)).filter(f=>/^pre-restore-\d+\.zip$/.test(f)).sort(); for (const f of pre.slice(0,Math.max(0,pre.length-3))) await fsp.unlink(path.join(BACKUP_DIR,f)).catch(()=>{}); } catch { /* ignore */ }
+    const incomingUploads=[];
+    for (const [name,data] of files) {
+      if (!name.startsWith('data/uploads/') || name.length<=13) continue;
+      const base=name.slice(13);
+      if (!/^[A-Za-z0-9._-]+$/.test(base) || base==='.' || base==='..' || !sniff(data)) { warnings.push('Skipped unsupported file: '+base.slice(0,50)); continue; }
+      incomingUploads.push([name,data]);
     }
     await fsp.mkdir(UPLOAD_DIR,{recursive:true}); await fsp.mkdir(BACKUP_DIR,{recursive:true});
     // Keep existing uploads too, so content referencing an image omitted from a partial ZIP cannot break the site.
     for (const [name,data] of incomingUploads) await fsp.writeFile(path.join(UPLOAD_DIR,name.slice('data/uploads/'.length)),data);
+    normalized.v=Math.max(Date.now(),(content&&content.v||0)+1); /* newer than the live site so every visitor refreshes */
     await writeJSONAtomic(CONTENT_FILE,normalized); content=normalized;
     const statsBuf=files.get('data/stats.json'); if (statsBuf) { try { const st=JSON.parse(statsBuf.toString('utf8')); if (st && st.days && st.total) { await writeJSONAtomic(STATS_FILE,st); stats=st; statsDirty=false; } } catch { /* leave current stats untouched */ } }
     const rvBuf=files.get('data/reviews.json'); if (rvBuf) { try { const j=JSON.parse(rvBuf.toString('utf8')); if (Array.isArray(j.items)) { reviews=j.items.filter(r=>r&&typeof r.id==='string'&&typeof r.name==='string'&&typeof r.text==='string'&&RV_STATUS.includes(r.status)).slice(0,5000); await saveReviews(); } } catch { /* keep current reviews */ } }
@@ -549,8 +649,16 @@ async function adminApi(req, res, route) {
         const base=name.slice('data/backups/'.length); try { JSON.parse(data.toString('utf8')); await fsp.writeFile(path.join(BACKUP_DIR,base),data); } catch { /* skip malformed historical backup */ }
       }
     }
-    return sendJSON(req,res,200,{ok:true,message:'Backup restored. Admin password was kept unchanged.',content});
+    let loggedOut=false, authRestored=false;
+    const authBuf=files.get('data/admin.json');
+    if (authBuf && new URL(req.url,'http://x').searchParams.get('auth')==='1') {
+      try { const a=JSON.parse(authBuf.toString('utf8')); if (authValid(a)) { auth={user:a.user,s1:a.s1,h1:a.h1,s2:a.s2,h2:a.h2,mustChange:false,epoch:Date.now()}; await writeJSONAtomic(AUTH_FILE,auth); authMtime=(await fsp.stat(AUTH_FILE)).mtimeMs; sessions.clear(); loggedOut=true; authRestored=true; } } catch { /* keep current login */ }
+    }
+    cloud.schedule(500);
+    return sendJSON(req,res,200,{ok:true,loggedOut,warnings:warnings.slice(0,10),message:(warnings.length?'Restored (with small notes: '+warnings.slice(0,3).join(' ')+') ':'')+(authRestored?'Backup restored including the admin login. Please sign in again with the backup\'s username and password.':'Backup restored. Admin password was kept unchanged.'),content});
   }
+  if (route === '/cloud/status' && method === 'GET') return sendJSON(req, res, 200, { ...cloud.status(), keepAwake: { url: SELF_URL || '', ok: keepAwakeOk, failed: keepAwakeFail } });
+  if (route === '/cloud/sync' && method === 'POST') { await cloud.syncNow(); return sendJSON(req, res, 200, { ...cloud.status(), keepAwake: { url: SELF_URL || '', ok: keepAwakeOk, failed: keepAwakeFail } }); }
   if (route === '/stats' && method === 'GET') return sendJSON(req, res, 200, statsSummary());
   if (route === '/backups' && method === 'GET') {
     const files = (await fsp.readdir(BACKUP_DIR)).filter(f => f.startsWith('content-')).sort().reverse();
@@ -582,28 +690,43 @@ async function adminApi(req, res, route) {
 }
 
 /* ------------------------------------------------------------------ pages */
+/* version number of a file (changes when the file changes) so browsers can keep it for a year */
+const verCache = new Map();
+function fileVer(file) {
+  try { const st = fs.statSync(file), k = file + st.mtimeMs + st.size; const c = verCache.get(file); if (c && c.k === k) return c.v; const v = Math.round(st.mtimeMs).toString(36) + st.size.toString(36); verCache.set(file, { k, v }); return v; } catch { return '0'; }
+}
+const pageCache = new WeakMap();
 async function renderCustomerPage(req, res) {
+  const hit = pageCache.get(content);
+  if (hit && hit.rv === rvVer && hit.sv === fileVer(path.join(ROOT, 'public', 'assets', 'site.js')) + fileVer(path.join(ROOT, 'public', 'assets', 'site.css')) && hit.t === fileVer(path.join(ROOT, 'public', 'index.html'))) return send(req, res, 200, hit.html, hit.h);
   let tpl = await fsp.readFile(path.join(ROOT, 'public', 'index.html'), 'utf8');
   const c = content, s = c.shop, si = c.site;
   const title = String(si.seoTitle || '').trim() || `${s.name} | ${s.nameTa || ''} – Retail & Wholesale, ${s.city || ''}`;
   const desc = String(si.seoDesc || '').trim() || `${s.name}, ${s.city || ''} – ${s.tagline || 'retail & wholesale store'}. ${si.heroTitleTa || ''}`.trim();
   const seed = JSON.stringify({ ...c, reviews: publicReviews() }).replace(/</g, '\\u003c').split(String.fromCharCode(0x2028)).join('\\u2028').split(String.fromCharCode(0x2029)).join('\\u2029');
-  const logo = si.logo ? escHtml(si.logo) : '';
-  tpl = tpl.replace('{{SPLASH_MARK}}', logo ? `<img src="${logo}" alt="" style="width:74px;height:74px;border-radius:18px;object-fit:cover;position:relative">` : '<b>CH</b>')
-    .replace('{{ICON}}', logo ? `<link rel="icon" href="${logo}"><link rel="apple-touch-icon" href="${logo}">` : '<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 64 64\'%3E%3Crect width=\'64\' height=\'64\' rx=\'16\' fill=\'%234a2f20\'/%3E%3C/svg%3E">')
+  const logoPath = si.logo || DEFAULT_LOGO, logo = escHtml(logoPath);
+  const icon = logoPath === DEFAULT_LOGO ? '/assets/icon-512.png' : logoPath;
+  const abs = u => PUBLIC_URL && u.startsWith('/') ? PUBLIC_URL + u : u;
+  const sv = fileVer(path.join(ROOT, 'public', 'assets', 'site.js')), cv = fileVer(path.join(ROOT, 'public', 'assets', 'site.css'));
+  tpl = tpl.replace('{{SPLASH_MARK}}', `<img class="splash-logo" src="${logo}" alt="" decoding="async" fetchpriority="high">`)
+    .replace('{{ICON}}', `<link rel="icon" href="${escHtml(icon)}"><link rel="apple-touch-icon" href="${escHtml(icon)}"><link rel="preload" as="image" href="${logo}">`)
     .replace('{{TYPO_FONTS}}', () => `<link rel="stylesheet" href="${escHtml(T.fontsHref(c.site.typo ? c.site.typo : T.resolve(c.site)))}">`)
     .replace('{{TYPO_STYLE}}', () => `<style id="cx-typo">${T.css(T.resolve(c.site))}</style>`)
-    .replace('{{SHOPNAME}}', escHtml(s.name)).replace('{{OGIMG}}', logo ? `<meta property="og:image" content="${logo}">` : '');
+    .replace('{{SHOPNAME}}', escHtml(s.name)).replace('{{OGIMG}}', `<meta property="og:image" content="${escHtml(abs(icon))}">`)
+    .replace('/assets/site.css', '/assets/site.css?v=' + cv).replace('/assets/site.js', '/assets/site.js?v=' + sv);
   tpl = tpl.replace(/\{\{TITLE\}\}/g, escHtml(title)).replace(/\{\{DESC\}\}/g, escHtml(desc))
     .replace('{{SEED}}', () => `<script id="seed" type="application/json">${seed}</script>`);
-  send(req, res, 200, tpl, { 'Content-Type': MIME['.html'], ...NO_STORE,
+  const h = { 'Content-Type': MIME['.html'], ...NO_STORE, ETag: '"p' + fileVer(path.join(ROOT, 'public', 'index.html')) + '-' + (content.v || 0) + '-' + rvVer + '-' + sv + cv + '"',
     'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; frame-src https://www.google.com https://maps.google.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'",
-    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()' });
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()' };
+  pageCache.set(content, { rv: rvVer, sv: sv + cv, t: fileVer(path.join(ROOT, 'public', 'index.html')), html: tpl, h });
+  send(req, res, 200, tpl, h);
 }
 async function renderAdminPage(req, res) {
   let tpl = await fsp.readFile(path.join(ROOT, 'admin', 'index.html'), 'utf8');
   const tp = T.resolve(content.site);
-  tpl = tpl.replace(/\{\{BASE\}\}/g, escHtml(ADMIN_PATH)).replace(/\{\{SITE_URL\}\}/g, escHtml(SITE_URL))
+  tpl = tpl.replace(/\{\{BASE\}\}\/(admin\.js|admin\.css|typography\.js)/g, (m, f) => escHtml(ADMIN_PATH) + '/' + f + '?v=' + fileVer(path.join(ROOT, f === 'typography.js' ? 'lib' : 'admin', f)))
+    .replace(/\{\{BASE\}\}/g, escHtml(ADMIN_PATH)).replace(/\{\{SITE_URL\}\}/g, escHtml(SITE_URL))
     .replace('{{TYPO_FONTS}}', () => `<link rel="stylesheet" href="${escHtml(T.fontsHref(tp))}">`).replace('{{TYPO_STYLE}}', () => `<style id="cx-typo">${T.css(tp)}</style>`);
   send(req, res, 200, tpl, { 'Content-Type': MIME['.html'], ...NO_STORE, 'X-Robots-Tag': 'noindex, nofollow, noarchive', 'X-Frame-Options': 'DENY',
     'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'" });
@@ -630,9 +753,12 @@ async function handle(req, res) {
     }
     if (req.method !== 'GET' && req.method !== 'HEAD') return notFound(req, res);
     if (rest === '/' || rest === '/index.html') return renderAdminPage(req, res);
-    if (rest === '/typography.js') return serveFile(req, res, path.join(ROOT, 'lib', 'typography.js'), { cache: 'no-cache' });
+    const vq = url.searchParams.has('v') ? 'private, max-age=31536000, immutable' : 'no-cache';
+    if (rest === '/heic2any.min.js') return serveFile(req, res, path.join(ROOT, 'admin', 'heic2any.min.js'), { cache: 'private, max-age=86400' });
+    if (rest.startsWith('/pdfjs/')) { const f = safeJoin(path.join(ROOT, 'admin', 'pdfjs'), rest.slice(7)); if (!f) return notFound(req, res); return serveFile(req, res, f, { cache: 'private, max-age=604800' }); }
+    if (rest === '/typography.js') return serveFile(req, res, path.join(ROOT, 'lib', 'typography.js'), { cache: vq });
     if (rest === '/admin.js' || rest === '/admin.css') {
-      return serveFile(req, res, path.join(ROOT, 'admin', rest.slice(1)), { cache: 'no-cache' });
+      return serveFile(req, res, path.join(ROOT, 'admin', rest.slice(1)), { cache: vq });
     }
     return notFound(req, res);
   }
@@ -647,11 +773,11 @@ async function handle(req, res) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return notFound(req, res);
   if (p === '/' || p === '/index.html') return renderCustomerPage(req, res);
   if (p === '/api/content') return sendJSON(req, res, 200, publicContent());
-  if (p === '/favicon.ico') { const lg = content.site && content.site.logo; if (lg && /^\/uploads\/[\w.-]+$/.test(lg)) { res.writeHead(302, { Location: lg, 'Cache-Control': 'no-cache' }); return res.end(); } return send(req, res, 204, '', { 'Cache-Control': 'public, max-age=3600' }); }
+  if (p === '/favicon.ico') { const lg = (content.site && content.site.logo) || DEFAULT_LOGO; const to = lg === DEFAULT_LOGO ? '/assets/icon-512.png' : lg; if (/^\/(uploads|assets)\/[\w.-]+$/.test(to)) { res.writeHead(302, { Location: to, 'Cache-Control': 'public, max-age=3600' }); return res.end(); } return send(req, res, 204, '', { 'Cache-Control': 'public, max-age=3600' }); }
   if (p === '/robots.txt') return send(req, res, 200, 'User-agent: *\nAllow: /\n', { 'Content-Type': MIME['.txt'], 'Cache-Control': 'no-cache' });
   if (p.startsWith('/assets/')) {
     const f = safeJoin(path.join(ROOT, 'public', 'assets'), p.slice(8)); if (!f) return notFound(req, res);
-    return serveFile(req, res, f, { cache: 'no-cache' });
+    return serveFile(req, res, f, { cache: url.searchParams.has('v') ? 'public, max-age=31536000, immutable' : 'public, max-age=3600, must-revalidate' });
   }
   if (p.startsWith('/uploads/')) {
     const f = safeJoin(UPLOAD_DIR, p.slice(9)); if (!f) return notFound(req, res);
@@ -666,6 +792,7 @@ async function init() {
   await fsp.mkdir(UPLOAD_DIR, { recursive: true });
   try { const t = path.join(DATA_DIR, '.write-test'); await fsp.writeFile(t, String(Date.now())); await fsp.unlink(t); }
   catch (e) { console.error(`\nCannot write to the data folder (${DATA_DIR}): ${e.message}\nSet DATA_DIR to a folder the server can write to (on a host: a persistent disk/volume).\n`); process.exit(1); }
+  await cloud.pullOnBoot();      /* fresh/wiped disk? bring everything back from Supabase first */
   await fsp.mkdir(BACKUP_DIR, { recursive: true });
   SEED = JSON.parse(await fsp.readFile(path.join(ROOT, 'seed', 'content.json'), 'utf8'));
   if (!(await exists(CONTENT_FILE))) await writeJSONAtomic(CONTENT_FILE, SEED);
@@ -673,12 +800,40 @@ async function init() {
   await loadContent();
   await loadReviews();
   await loadAuth();
+  loadStats();
+  cloud.start();
 }
 
 process.on('unhandledRejection', e => console.error('Unhandled rejection:', e));
 process.on('uncaughtException', e => { console.error('Fatal error, restarting:', e); try { saveStats(); } catch { /* ignore */ } process.exit(1); });   // the host / Docker / systemd restarts the server
+/* Keep-awake (always on): free hosts such as Render put a service to sleep after 15 minutes without visitors.
+   Every 8 minutes we call our own public address, which counts as a visit and keeps the site awake.
+   The address comes from KEEP_AWAKE_URL / RENDER_EXTERNAL_URL / PUBLIC_URL, or is learned from the first real request. */
+let SELF_URL = String(process.env.KEEP_AWAKE_URL || process.env.RENDER_EXTERNAL_URL || PUBLIC_URL || '').trim().replace(/\/+$/, '');
+const learnSelfUrl = req => {
+  if (SELF_URL) return;
+  const h = String(req.headers.host || ''); if (!h || /^(localhost|127\.|0\.0\.0\.0|\[::1\]|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(h)) return;
+  const proto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() || (/\.onrender\.com$|\.railway\.app$|\.fly\.dev$/i.test(h) ? 'https' : 'http');
+  SELF_URL = proto + '://' + h;
+};
+let keepAwakeStarted = false, keepAwakeOk = 0, keepAwakeFail = 0;
+function startKeepAwake() {
+  if (keepAwakeStarted) return; keepAwakeStarted = true;
+  const ping = async () => {
+    if (!SELF_URL) return;
+    for (const p of ['/healthz', '/']) {
+      try { const r = await fetch(SELF_URL + p, { headers: { 'User-Agent': 'keep-awake' }, signal: AbortSignal.timeout(30000) }); if (r.status < 500) { keepAwakeOk++; return; } } catch { /* try next */ }
+    }
+    keepAwakeFail++;
+  };
+  setInterval(() => { ping().catch(() => {}); }, 8 * 60 * 1000);
+  setTimeout(() => { ping().catch(() => {}); }, 90 * 1000);
+  console.log('  Keep-awake    : ON (pings the public address every 8 min' + (SELF_URL ? ': ' + SELF_URL : '; address is learned from the first visitor') + ')');
+}
+
 init().then(() => {
   const server = http.createServer((req, res) => {
+    learnSelfUrl(req);
     handle(req, res).catch(e => { console.error(e); if (!res.headersSent) send(req, res, 500, 'Server error', { 'Content-Type': MIME['.txt'] }); else res.end(); });
   });
   server.requestTimeout = 60000; server.headersTimeout = 30000; server.keepAliveTimeout = 65000;
@@ -688,7 +843,9 @@ init().then(() => {
     console.log(`  Customer site : http://localhost:${PORT}/`);
     console.log(`  Admin panel   : http://localhost:${PORT}${ADMIN_PATH}/   (keep this address private)`);
     console.log(`  Data folder   : ${DATA_DIR}`);
-    if (process.env.RENDER && !process.env.DATA_DIR) console.log('  WARNING       : on Render the data folder must be a persistent disk. Set DATA_DIR to the disk mount path (see README).');
+    startKeepAwake();
+    console.log('  Cloud storage : ' + (cloud.enabled ? 'Supabase ON (' + cloud.status().host + ')' : 'OFF (set SUPABASE_URL + SUPABASE_SERVICE_KEY to protect data on free hosts)'));
+    if (process.env.RENDER && !process.env.DATA_DIR && !cloud.enabled) console.log('  WARNING       : on Render the data folder must be a persistent disk. Set DATA_DIR to the disk mount path (see README).');
     if (IS_PROD && !TRUST_PROXY && !process.env.PUBLIC_URL) console.log('  Tip           : behind HTTPS set TRUST_PROXY=1 and FORCE_HTTPS=1 so cookies are Secure.');
     console.log('');
   });

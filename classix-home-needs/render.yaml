@@ -23,3 +23,7 @@ services:
         value: "1"
       - key: PUBLIC_URL
         sync: false            # e.g. https://www.your-domain.com (optional)
+      - key: SUPABASE_URL
+        sync: false            # https://xxxx.supabase.co  (see SUPABASE-SETUP.md)
+      - key: SUPABASE_SERVICE_KEY
+        sync: false            # service_role / secret key - keep private
