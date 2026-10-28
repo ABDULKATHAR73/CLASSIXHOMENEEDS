@@ -1,6 +1,6 @@
 {
   "name": "classic-home-needs",
-  "version": "4.8.0",
+  "version": "4.9.4",
   "description": "Classic Home Needs website \u2013 customer site and separate admin panel with shared live content",
   "private": true,
   "main": "server.js",

@@ -1,3 +1,25 @@
+# v4.9.4
+
+- **Header (desktop / laptop / tablet)**: bigger logo in the left corner, shop name + Tamil name in the centre, Tamil|English and menu buttons in the right corner. Phone layout unchanged.
+
+# v4.9.3
+
+- **Header on desktop / laptop / tablet**: shop logo + name are centred and fully visible; the Tamil|English button and the menu button sit in the right corner. Quick menu pills are centred below.
+
+# v4.9.2
+
+- **Photo viewer fixed**: tapping a photo in Shop Gallery, Offers or Products now always shows the WHOLE photo (tall phone screenshots, portrait and wide photos were cut off at the bottom before). Zoom, swipe and caption still work.
+
+# v4.9.1
+
+- **Admin search results** are now clear cards: bold title, a dashed line, then the page and section where the setting is (no more overlapping text).
+
+# v4.9.0 additions
+
+- **Supabase storage usage** (Admin > Backup & Security): used / free space in MB or GB with a progress bar, split into photos & PDFs, automatic backups, and settings/reviews. A coloured warning shows on the Dashboard and on that page at **70%, 85% and 95%** full. The limit defaults to 1 GB (Supabase free); on a paid plan set `SUPABASE_LIMIT_MB` in Render (e.g. 8192 for 8 GB). Free space with "Delete unused photos".
+- **Header never overlaps**: if the full menu does not fit on a screen (laptop, desktop, big Tamil fonts), the site automatically switches to the compact menu (burger + quick pills). Works for Tamil and English on every screen size.
+- **Full photos everywhere**: new defaults show the WHOLE photo (nothing cropped) for hero slider, products, gallery, offers and about. Admin > Display & Sizes > "Photo display - choose for each area": choose "Show the FULL photo" or "Fill the box (edges may be cropped)" separately for each area. Press Save, then Refresh Customer Website.
+
 # v4.7.1 additions
 
 - **Retail / Wholesale tags**: hidden on the website by default. Admin > Retail & Wholesale Settings > switch "Show Retail / Wholesale available" ON to show them. When OFF, the retail/wholesale fields also disappear from the product form.

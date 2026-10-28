@@ -22,7 +22,9 @@ module.exports = function createCloud({ dataDir, afterPull }) {
   const key = String(process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || '').trim();
   const bucket = String(process.env.SUPABASE_BUCKET || 'classix-data').trim();
   const enabled = /^https?:\/\//i.test(rawUrl) && key.length > 20;
-  const st = { enabled, bucket, connected: false, pushAllowed: false, lastSync: 0, lastError: '', lastErrorAt: 0, files: 0, pending: 0, restored: 0, host: enabled ? rawUrl.replace(/^https?:\/\//, '') : '' };
+  const st = { enabled, bucket, connected: false, pushAllowed: false, lastSync: 0, lastError: '', lastErrorAt: 0, files: 0, pending: 0, restored: 0, usedBytes: 0, limitBytes: 0, parts: { uploads: 0, backups: 0, data: 0 }, host: enabled ? rawUrl.replace(/^https?:\/\//, '') : '' };
+  const LIMIT_MB = Number(process.env.SUPABASE_LIMIT_MB) > 0 ? Number(process.env.SUPABASE_LIMIT_MB) : 1024;   // Supabase free plan = 1 GB (set SUPABASE_LIMIT_MB if you upgrade)
+  st.limitBytes = LIMIT_MB * 1048576;
   const synced = new Map();            // key -> "size:mtime" that is known to be stored remotely
   const lastUp = new Map();
   let timer = null, running = null, interval = null, warned = new Set();
@@ -163,7 +165,8 @@ module.exports = function createCloud({ dataDir, afterPull }) {
         if (gone.length && local.has('content.json')) {       /* never mass-delete when the local copy looks empty */
           try { await removeRemote(gone); gone.forEach(k => synced.delete(k)); } catch (e) { setErr(e); }
         }
-        st.files = local.size; st.pending = pending; st.connected = failed === 0; if (!failed) { st.lastSync = Date.now(); st.lastError = ''; }
+        st.files = local.size; st.usedBytes = 0; st.parts = { uploads: 0, backups: 0, data: 0 };
+        for (const [k, v] of local) { const n = v.size || 0; st.usedBytes += n; const g = k.startsWith('uploads/') ? 'uploads' : k.startsWith('backups/') ? 'backups' : 'data'; st.parts[g] += n; } st.pending = pending; st.connected = failed === 0; if (!failed) { st.lastSync = Date.now(); st.lastError = ''; }
       } catch (e) { setErr(e); st.connected = false; }
       finally { running = null; }
       return st;
@@ -180,7 +183,11 @@ module.exports = function createCloud({ dataDir, afterPull }) {
     const hb = setInterval(() => { call('POST', `/storage/v1/object/list/${encodeURIComponent(bucket)}`, { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prefix: '', limit: 1 }), tries: 1 }).catch(() => {}); }, 6 * 3600 * 1000); if (hb.unref) hb.unref();
   }
   async function flush(maxMs = 9000) { if (!enabled) return; clearTimeout(timer); await Promise.race([syncNow().catch(() => {}), sleep(maxMs)]); }
-  function status() { return { ...st, synced: synced.size }; }
+  function status() {
+    const used = st.usedBytes, limit = st.limitBytes, pct = limit ? Math.min(100, used / limit * 100) : 0;
+    const level = pct >= 95 ? 'critical' : pct >= 85 ? 'high' : pct >= 70 ? 'warn' : 'ok';
+    return { ...st, synced: synced.size, freeBytes: Math.max(0, limit - used), usedPercent: Math.round(pct * 10) / 10, level };
+  }
 
   return { enabled, pullOnBoot, syncNow, schedule, start, flush, status };
 };

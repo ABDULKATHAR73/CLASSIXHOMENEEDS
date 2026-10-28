@@ -1212,9 +1212,7 @@ footer .fb p .ta + .en{margin-left:0}
 .toast.show{transform:none!important}
 .ferr,.rv-msg{color:#b0261c;font-weight:700;line-height:1.5}
 /* ===== v4.3: offers / gallery / reviews pages,full images ===== */
-html[data-fit=contain] .ph img,html[data-fit=contain] .pd-main img,html[data-fit=contain] .slide img,html[data-fit=contain] .thumbs img,html[data-fit=contain] .gal-prev .gi img,html[data-fit=contain] .about-img img,html[data-fit=contain] .lp-oi img{object-fit:contain!important}
 html[data-fit=contain] .ph,html[data-fit=contain] .pd-main,html[data-fit=contain] .thumbs button,html[data-fit=contain] .about-img{background:#fdf5e4}
-html[data-fit=contain] .slide{background:var(--brown)}
 .gi img{object-fit:contain}
 .pdfi{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:linear-gradient(145deg,#fff3da,#f3dcae);color:#7a2a12;font-weight:900;letter-spacing:.1em;z-index:0}
 .pdfi b{font-size:44px;line-height:1}
@@ -1451,3 +1449,77 @@ header.top{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(255
 
 section.sec,.hero,[id].sec{scroll-margin-top:calc(var(--hdr-h,118px) + 8px) !important}
 html{scroll-padding-top:calc(var(--hdr-h,118px) + 8px)}
+
+/* ===== v4.9: photo display per area (admin > Display & Sizes > Photo display). contain = FULL photo, cover = fill the box ===== */
+html[data-fit-hero=contain] .slide img{object-fit:contain!important;transform:none}html[data-fit-hero=contain] .slide{background:var(--brown)}
+html[data-fit-hero=cover] .slide img{object-fit:cover!important}
+html[data-fit-products=contain] .ph img,html[data-fit-products=contain] .pd-main img,html[data-fit-products=contain] .thumbs img{object-fit:contain!important}
+html[data-fit-products=cover] .ph img,html[data-fit-products=cover] .pd-main img,html[data-fit-products=cover] .thumbs img{object-fit:cover!important}
+html[data-fit-products=contain] .ph,html[data-fit-products=contain] .pd-main{background:#fdf5e4}
+html[data-fit-gallery=contain] .gal-prev .gi img,html[data-fit-gallery=contain] .gi img{object-fit:contain!important}
+html[data-fit-gallery=cover] .gal-prev .gi img,html[data-fit-gallery=cover] .gi img{object-fit:cover!important}
+html[data-fit-gallery=contain] .gal-prev .gi,html[data-fit-gallery=contain] .gi{background:#fdf5e4}
+html[data-fit-offers=contain] .of-top img,html[data-fit-offers=contain] .ofd-bg,html[data-fit-offers=contain] .ofd-ph img,html[data-fit-offers=contain] .ofd-im img,html[data-fit-offers=contain] .of-strip i img,html[data-fit-offers=contain] .lp-oi img{object-fit:contain!important}
+html[data-fit-offers=cover] .of-top img,html[data-fit-offers=cover] .ofd-bg,html[data-fit-offers=cover] .ofd-ph img,html[data-fit-offers=cover] .ofd-im img,html[data-fit-offers=cover] .of-strip i img,html[data-fit-offers=cover] .lp-oi img{object-fit:cover!important}
+html[data-fit-offers=contain] .of-top:hover img{transform:none}
+html[data-fit-offers=contain] .of-top{height:auto;aspect-ratio:4/3}
+html[data-fit-offers=contain] .ofd-ph button,html[data-fit-offers=contain] .ofd-im{background:#fdf5e4}
+html[data-fit-about=contain] .about-img img{object-fit:contain!important}html[data-fit-about=contain] .about-img{background:#fdf5e4}
+html[data-fit-about=cover] .about-img img{object-fit:cover!important}
+
+/* ===== v4.9: header can never overlap - compact menu is switched on automatically when the full menu does not fit ===== */
+header.top.compact .links,header.top.compact .hide-sm{display:none!important}
+header.top.compact .burger{display:grid!important}
+header.top.compact .qnav{display:flex!important}
+header.top.compact .brand small{display:none}
+header.top .nav>*{min-width:0}
+header.top .brand{flex:0 1 auto;min-width:0}
+header.top .brand-t{min-width:0}
+header.top .brand-t b,header.top .brand-t .ta{overflow-wrap:anywhere}
+header.top .links a{overflow:hidden;text-overflow:clip}
+header.top.compact #langBtn{margin-left:auto}
+header.top.compact .qnav{justify-content:safe center;max-width:1180px;margin:0 auto}
+
+/* ===== v4.9.2: photo viewer always shows the WHOLE photo (tall phone screenshots, portrait, wide) ===== */
+.lb{height:100vh;height:100dvh;bottom:auto}
+.lb-stage{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);place-items:center;min-height:0}
+.lb-img{max-width:100%;max-height:100%;width:auto;height:auto;min-width:0;min-height:0;object-fit:contain;border-radius:4px}
+.lb-cap{flex:none;min-height:0;padding:10px 20px calc(16px + env(safe-area-inset-bottom))}
+.lb-top{flex:none}
+
+/* ===== v4.9.3: compact header on desktop/laptop/tablet - shop name centred & fully visible, Tamil|English + menu in the right corner ===== */
+@media(min-width:700px){
+  header.top.compact .nav{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;column-gap:14px;max-width:none;width:100%;box-sizing:border-box;padding-left:clamp(16px,3vw,40px);padding-right:clamp(16px,3vw,40px)}
+  header.top.compact .brand{grid-column:2;grid-row:1;justify-self:center;max-width:none;min-width:0;display:flex;align-items:center;gap:12px}
+  header.top.compact .brand-t{text-align:left;min-width:0}
+  header.top.compact .brand-t b{display:block;font-size:clamp(20px,2.2vw,28px);line-height:1.2;white-space:nowrap;overflow:visible}
+  header.top.compact .brand-t .ta{display:block;font-size:clamp(13px,1.3vw,16px);white-space:nowrap}
+  header.top.compact #langBtn{grid-column:3;grid-row:1;justify-self:end;margin:0 54px 0 0}
+  header.top.compact .burger{grid-column:3;grid-row:1;justify-self:end;margin:0}
+}
+
+@media(min-width:700px) and (max-width:1179px){
+  header.top .nav{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;column-gap:14px;max-width:none;width:100%;box-sizing:border-box;padding-left:clamp(16px,3vw,40px);padding-right:clamp(16px,3vw,40px)}
+  header.top .brand{grid-column:2;grid-row:1;justify-self:center;max-width:none;min-width:0;display:flex;align-items:center;gap:12px}
+  header.top .brand-t{text-align:left;min-width:0}
+  header.top .brand-t b{display:block;font-size:clamp(20px,2.2vw,28px);line-height:1.2;white-space:nowrap;overflow:visible}
+  header.top .brand-t .ta{display:block;font-size:clamp(13px,1.3vw,16px);white-space:nowrap}
+  header.top #langBtn{grid-column:3;grid-row:1;justify-self:end;margin:0 54px 0 0}
+  header.top .burger{grid-column:3;grid-row:1;justify-self:end;margin:0}
+}
+@media(min-width:700px){header.top .qnav{justify-content:safe center}}
+
+@media(min-width:700px) and (max-width:1179px){
+  header.top.compact .brand,header.top .brand{display:contents}
+  header.top.compact .brand .logo.img,header.top .brand .logo.img{grid-column:1;grid-row:1;justify-self:start;height:clamp(62px,6.2vw,88px)!important;width:auto!important;max-width:none}
+  header.top.compact .brand .logo.img img,header.top .brand .logo.img img{height:100%!important;width:auto!important;max-width:none!important}
+  header.top.compact .brand-t,header.top .brand-t{grid-column:2;grid-row:1;justify-self:center;text-align:center;align-items:center}
+  header.top.compact .brand-t b,header.top .brand-t b,header.top.compact .brand-t .ta,header.top .brand-t .ta{text-align:center}
+}
+@media(min-width:1180px){
+  header.top.compact .brand,header.top.compact .brand{display:contents}
+  header.top.compact .brand .logo.img,header.top.compact .brand .logo.img{grid-column:1;grid-row:1;justify-self:start;height:clamp(62px,6.2vw,88px)!important;width:auto!important;max-width:none}
+  header.top.compact .brand .logo.img img,header.top.compact .brand .logo.img img{height:100%!important;width:auto!important;max-width:none!important}
+  header.top.compact .brand-t,header.top.compact .brand-t{grid-column:2;grid-row:1;justify-self:center;text-align:center;align-items:center}
+  header.top.compact .brand-t b,header.top.compact .brand-t b,header.top.compact .brand-t .ta,header.top.compact .brand-t .ta{text-align:center}
+}

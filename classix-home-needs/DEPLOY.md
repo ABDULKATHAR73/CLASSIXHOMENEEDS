@@ -73,6 +73,6 @@ Health check URL: `/healthz`.
 ## Data safety on free hosts (Supabase) and staying awake
 * **SUPABASE-SETUP.md** explains how to connect a free Supabase project (`SUPABASE_URL` + `SUPABASE_SERVICE_KEY`).
   All data is then mirrored to a private bucket and restored automatically after every restart/deploy.
-* **Keep-awake is always on**: the server calls its own public address every 8 minutes so a free Render service does not sleep.
+* **Keep-awake is on by default** (switch it ON/OFF in Admin > Backup & Security; `KEEP_AWAKE=0` sets the starting default to OFF): the server calls its own public address every 8 minutes so a free Render service does not sleep.
   For extra safety also add a free UptimeRobot monitor for `https://YOUR-SITE.onrender.com/healthz` (every 5 minutes).
 

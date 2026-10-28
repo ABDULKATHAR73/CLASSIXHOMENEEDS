@@ -519,6 +519,7 @@ function applyUI() {
   col('uiColorBrown', '--brown'); col('uiColorBrown2', '--brown2'); col('uiColorGold', '--gold'); col('uiColorGold2', '--gold2'); col('uiColorCream', '--cream');
   const tc = document.querySelector('meta[name=theme-color]'); if (tc) tc.content = /^#[0-9a-f]{6}$/i.test(String(C.site.uiColorBrown || '')) ? C.site.uiColorBrown : '#4a2f20';
   document.documentElement.dataset.fit = C.site.imgFit === 'cover' ? 'cover' : 'contain';
+  ['hero', 'products', 'gallery', 'offers', 'about'].forEach(a => { const v = C.site['imgFit' + a[0].toUpperCase() + a.slice(1)]; document.documentElement.dataset['fit' + a[0].toUpperCase() + a.slice(1)] = v === 'cover' ? 'cover' : 'contain'; });
   document.documentElement.dataset.anim = ['full', 'light', 'off'].includes(String(g('uiAnim'))) ? g('uiAnim') : 'full';
   document.documentElement.dataset.glow = g('uiGlow') === false || g('uiGlow') === 'false' ? 'off' : 'on';
 }
@@ -526,7 +527,25 @@ function renderAll(keep) {
   const y = scrollY; prep(); applyLabels(); applyUI(); buildNav(); clearInterval(heroTimer); shell(); markLoaded(); afterRender();
   document.title = S('seoTitle') || `${C.shop.name} | ${C.shop.nameTa || ''} – Retail & Wholesale, ${C.shop.city || ''}`;
   if (keep) scrollTo(0, y);
+  fitHeader();
 }
+/* Header never overlaps: if the full menu does not fit (any screen, any font size, Tamil or English) switch to the compact menu (burger + quick pills). */
+let fhT = 0;
+function fitHeader() {
+  const h = document.getElementById('top'); if (!h) return;
+  h.classList.remove('compact');
+  if (innerWidth < 980) return;
+  const nav = h.querySelector('.nav'), kids = [...nav.children].filter(e => e.offsetParent !== null && e.getBoundingClientRect().width > 0);
+  let bad = nav.scrollWidth > nav.clientWidth + 1;
+  for (let i = 1; i < kids.length && !bad; i++) if (kids[i].getBoundingClientRect().left < kids[i - 1].getBoundingClientRect().right - 1) bad = true;
+  const lk = h.querySelector('.links'); if (!bad && lk) { const L = [...lk.children]; if (L.some(a => a.scrollWidth > a.clientWidth + 1)) bad = true; }
+  if (bad) h.classList.add('compact');
+}
+const fitSoon = () => { clearTimeout(fhT); fhT = setTimeout(fitHeader, 120); };
+addEventListener('resize', fitSoon); addEventListener('load', fitSoon); addEventListener('orientationchange', fitSoon);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitSoon);
+new MutationObserver(fitSoon).observe(document.body, { attributes: true, attributeFilter: ['data-lang', 'class'] });
+new MutationObserver(fitSoon).observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'data-lang'] });
 document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.of-card[data-offer]')) { e.preventDefault(); openOffer(e.target.dataset.offer); } });
 document.addEventListener('click', e => {
   if (e.target.closest('[data-opclose]')) { e.preventDefault(); closeOffer(); return; }

@@ -657,8 +657,13 @@ async function adminApi(req, res, route) {
     cloud.schedule(500);
     return sendJSON(req,res,200,{ok:true,loggedOut,warnings:warnings.slice(0,10),message:(warnings.length?'Restored (with small notes: '+warnings.slice(0,3).join(' ')+') ':'')+(authRestored?'Backup restored including the admin login. Please sign in again with the backup\'s username and password.':'Backup restored. Admin password was kept unchanged.'),content});
   }
-  if (route === '/cloud/status' && method === 'GET') return sendJSON(req, res, 200, { ...cloud.status(), keepAwake: { url: SELF_URL || '', ok: keepAwakeOk, failed: keepAwakeFail } });
-  if (route === '/cloud/sync' && method === 'POST') { await cloud.syncNow(); return sendJSON(req, res, 200, { ...cloud.status(), keepAwake: { url: SELF_URL || '', ok: keepAwakeOk, failed: keepAwakeFail } }); }
+  if (route === '/cloud/status' && method === 'GET') return sendJSON(req, res, 200, { ...cloud.status(), keepAwake: kaInfo() });
+  if (route === '/keepawake' && method === 'POST') {
+    const b = (await readJSON(req)) || {}; if ('enabled' in b) KEEP_AWAKE_ON = !!b.enabled; if ('minutes' in b) { KEEP_AWAKE_MIN = clampMin(b.minutes); kaRestart(); }
+    await writeJSONAtomic(KA_FILE, { keepAwake: KEEP_AWAKE_ON, minutes: KEEP_AWAKE_MIN });
+    return sendJSON(req, res, 200, { ...cloud.status(), keepAwake: kaInfo() });
+  }
+  if (route === '/cloud/sync' && method === 'POST') { await cloud.syncNow(); return sendJSON(req, res, 200, { ...cloud.status(), keepAwake: kaInfo() }); }
   if (route === '/stats' && method === 'GET') return sendJSON(req, res, 200, statsSummary());
   if (route === '/backups' && method === 'GET') {
     const files = (await fsp.readdir(BACKUP_DIR)).filter(f => f.startsWith('content-')).sort().reverse();
@@ -807,7 +812,7 @@ async function init() {
 process.on('unhandledRejection', e => console.error('Unhandled rejection:', e));
 process.on('uncaughtException', e => { console.error('Fatal error, restarting:', e); try { saveStats(); } catch { /* ignore */ } process.exit(1); });   // the host / Docker / systemd restarts the server
 /* Keep-awake (always on): free hosts such as Render put a service to sleep after 15 minutes without visitors.
-   Every 8 minutes we call our own public address, which counts as a visit and keeps the site awake.
+   Every N minutes (default 8, set in Admin) we call our own public address, which counts as a visit and keeps the site awake.
    The address comes from KEEP_AWAKE_URL / RENDER_EXTERNAL_URL / PUBLIC_URL, or is learned from the first real request. */
 let SELF_URL = String(process.env.KEEP_AWAKE_URL || process.env.RENDER_EXTERNAL_URL || PUBLIC_URL || '').trim().replace(/\/+$/, '');
 const learnSelfUrl = req => {
@@ -816,19 +821,27 @@ const learnSelfUrl = req => {
   const proto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() || (/\.onrender\.com$|\.railway\.app$|\.fly\.dev$/i.test(h) ? 'https' : 'http');
   SELF_URL = proto + '://' + h;
 };
+const KA_FILE = path.join(DATA_DIR, 'settings.json');   // { keepAwake: true|false } saved from the admin panel; overrides KEEP_AWAKE
+let KEEP_AWAKE_ON = !/^(0|off|false|no)$/i.test(String(process.env.KEEP_AWAKE || '').trim());   // KEEP_AWAKE=0 = default OFF
+let KEEP_AWAKE_MIN = 8;   // minutes between visits (1-14; free hosts sleep after 15)
+const clampMin = n => Math.max(1, Math.min(14, Math.round(Number(n)) || 8));
+try { const st = JSON.parse(fs.readFileSync(KA_FILE, 'utf8')); if (typeof st.keepAwake === 'boolean') KEEP_AWAKE_ON = st.keepAwake; if (st.minutes) KEEP_AWAKE_MIN = clampMin(st.minutes); } catch { /* no saved setting */ }
+const kaInfo = () => ({ enabled: KEEP_AWAKE_ON, minutes: KEEP_AWAKE_MIN, url: SELF_URL || '', ok: keepAwakeOk, failed: keepAwakeFail });
+let kaTimer = null, kaRestart = () => {};
 let keepAwakeStarted = false, keepAwakeOk = 0, keepAwakeFail = 0;
 function startKeepAwake() {
   if (keepAwakeStarted) return; keepAwakeStarted = true;
   const ping = async () => {
-    if (!SELF_URL) return;
+    if (!KEEP_AWAKE_ON || !SELF_URL) return;
     for (const p of ['/healthz', '/']) {
       try { const r = await fetch(SELF_URL + p, { headers: { 'User-Agent': 'keep-awake' }, signal: AbortSignal.timeout(30000) }); if (r.status < 500) { keepAwakeOk++; return; } } catch { /* try next */ }
     }
     keepAwakeFail++;
   };
-  setInterval(() => { ping().catch(() => {}); }, 8 * 60 * 1000);
+  const loop = () => { clearTimeout(kaTimer); kaTimer = setTimeout(() => { ping().catch(() => {}).finally(loop); }, KEEP_AWAKE_MIN * 60 * 1000); };
+  kaRestart = loop; loop();
   setTimeout(() => { ping().catch(() => {}); }, 90 * 1000);
-  console.log('  Keep-awake    : ON (pings the public address every 8 min' + (SELF_URL ? ': ' + SELF_URL : '; address is learned from the first visitor') + ')');
+  console.log('  Keep-awake    : ' + (KEEP_AWAKE_ON ? 'ON (pings the public address every ' + KEEP_AWAKE_MIN + ' min' + (SELF_URL ? ': ' + SELF_URL : '; address is learned from the first visitor') + ')' : 'OFF (switch it on in Admin > Backup & Security)'));
 }
 
 init().then(() => {
