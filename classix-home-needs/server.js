@@ -50,7 +50,7 @@ const MAX_JSON = 6 * 1024 * 1024;
 const MAX_UPLOAD = 12 * 1024 * 1024; /* 12 MB per file (phone HEIC photos are converted + shrunk on the server) */
 const MAX_BACKUP_UPLOAD = 100 * 1024 * 1024;
 const SESSION_MS = 12 * 60 * 60 * 1000;
-const KEEP_BACKUPS = 40;
+const KEEP_BACKUPS = 10;
 const APP_VERSION = (() => { try { return require('./package.json').version; } catch { return ''; } })();
 
 /* ----------------------------------------------------------------- helpers */
