@@ -1,6 +1,79 @@
-# v4.9.4
+# v4.17.0 - Find setting (tap anything on the website, see every setting for it)
 
-- **Header (desktop / laptop / tablet)**: bigger logo in the left corner, shop name + Tamil name in the centre, Tamil|English and menu buttons in the right corner. Phone layout unchanged.
+- **New button in the admin top bar: "Find setting".** It opens your customer website inside the admin panel. Tap any text, button, heading or photo - the admin jumps to the exact setting and highlights it so you can change it and press Save.
+- Works by matching what you tapped with the real settings (Tamil or English text, and photos). If several settings match, you choose from a short list. If none match, the closest page opens.
+- Tapping a product on the website now finds that product's edit form (name, short line, description, price…).
+- The sheet shows every related setting: the words, the other settings of the same part (link, colour, show / hide) and the size / font / style settings.
+- The two refresh buttons sit side by side at the top; "Find setting" is in the Menu.
+- **Full check before public hosting:** every visible website text can be edited in the admin. The "Leave the website?" box texts, "Tap to see" and the all-products title were missing from Website Text & Labels and are added there now. Pressing Esc closes the mobile menu on computers. The website cannot be shown inside another website (frame-ancestors), and Find setting mode only works inside the admin panel.
+- Nothing changes on the customer website for visitors; this mode only works inside the admin panel and is never counted as a visit. The existing search bar is unchanged.
+
+# v4.16.0 - smooth button effects, nothing outside the screen, compact leave box, shop name ON
+
+- **Button effect:** the slanted shine band (the visible "cut line") is gone. Buttons now glow softly over the whole button, and button shadows are no longer clipped at the section edge. Applies to every button (gold, WhatsApp, offers banner, review, leave box).
+- **Phones / tablets / laptops:** contact boxes (email, address, timings), forms, totals and buttons now shrink to fit - long emails and words wrap instead of going outside the screen. Nothing is hidden or cut.
+- **"Leave the website?" box:** compact half-page popup (smaller logo, text and side-by-side Stay / Exit buttons). It always shows the shop name from Store Settings and rebuilds each time it opens, so admin changes appear immediately.
+- **Admin duplicates removed:** the separate "Shop name" boxes inside the Leave-box settings (they did not follow the real shop name). Shop name now has ONE place: Store Settings.
+- **Shop name in the header:** ON by default for everyone (this upgrade switches it back on once). It turns OFF only when you untick it in Display & Sizes.
+
+# v4.15.0 - numbers stay together, admin menu follows the website, scroll effects, smooth back transitions
+
+- **Numbers never split:** "10", "1000+", "1106", "₹1,23,456", "25% OFF" always stay on ONE line (the "Total Reviews / Offers / Products / Images" boxes on the sub pages, number counters, prices, countdown, badges). Tested with 1000+ values on phone (320 / 390 px) and computer.
+- **Admin menu = website order:** Dashboard, Header & Footer, Offers Banner Studio, Home Page Settings (hero ...), then Categories, Products, Price List, Retail & Wholesale, Offers & Festivals, Gallery, Reviews, Contact - the same top-to-bottom order as the customer website - then Social, Store, Display & Sizes, Typography, Menu & Sections, Labels, Visitor Stats, Backup. If you change the section order in **Menu & Sections**, the admin menu follows it automatically.
+- **Scroll animations everywhere:** every section, card, gallery photo, contact box, footer column and list item now rises / zooms / slides in one after another while you scroll, headings draw a gold underline, counters pop, and a colourful **scroll progress bar** runs along the top. Admin > Display & Sizes > "Scroll effect style" (Rise up / Zoom / Slide from sides / Bouncy pop) and "Scroll animations" (Full / Light / Off).
+- **Smooth back / open transitions:** offer page, all-offers / gallery / reviews / products pages slide in from the right with the background fading dark; pressing Back slides them out smoothly. The menu drawer, popups and photo viewer now also animate when they CLOSE (before they vanished instantly).
+
+# v4.14.1 - compact offers banner + Offers Banner Studio scrolls normally
+
+- **Offers banner is now small and compact** on phones, tablets, laptops and computers (about half the old height on phones). Bigger / smaller any time: Admin > Offers Banner Studio > **"OVERALL banner size"** slider (60% - 200%), plus the separate height / text / button / picture sliders.
+- **Offers Banner Studio page:** the live preview is no longer pinned (it blocked scrolling on phones). The settings come first; the **live preview is at the very bottom**. A "Go to the live preview" button at the top jumps there.
+
+# v4.14.0 - Offers Banner Studio (live preview + sliders) and a much smoother banner
+
+- **New admin page: Offers Banner Studio** (left menu, under Offers & Festivals). A **live preview** (Phone / Tablet / Computer) stays on top while you move the **slider bars**: banner height, title size, short-line size, price size, button size and thickness, picture size, animation speed, number of floating emojis. Switches: shining light, pulsing button / badge, floating picture, slide-in text. Press **Save** to publish. The old banner boxes in Display & Sizes moved here (no duplicates).
+- **Smoothness mode:** Auto (full effects, lighter on weak phones - default) / Full / Light / No animation.
+- **Why it was laggy, and what changed:** the old banner repainted a big moving gradient, animated shadows and used blur on every frame, and every slide animated even when hidden. Now only the **visible slide** animates, using only graphics-chip friendly effects (move / scale / fade), animation pauses when the banner is scrolled out of view or the tab is hidden, blur filters were removed, and the colour gradients are smooth (no hard colour edge).
+- Banner is more compact on phones and the button text stays on one line.
+- The preview does not count as a website visitor.
+
+# v4.13.0 - new colourful, animated offers banner (top of the website)
+
+- **New look:** moving gradient colours, floating emoji / twinkling stars behind the text, a glowing round offer picture, a pulsing LIMITED / NEW badge, a big price chip with a wiggling "% OFF" sticker, a **live countdown (days + hh:mm:ss)** and a big shining, pulsing button. Every slide animates in when it appears. Phones get a tidy stacked layout; computers get a wide layout.
+- **Everything is editable and can be switched on / off, per offer:** Admin > Offers & Festivals > open an offer > **"⑦ Top swipe banner"**: badge, title (own banner title Tamil / English), short line, special price, "% OFF" sticker, countdown, picture, emoji, moving effect (floating emojis / party mix / twinkling stars / none), own banner colours, and the button (on/off, Tamil / English text, arrow or icon, colour, and whether it opens the offer page or WhatsApp).
+- **Default button text for all banners:** Admin > Display & Sizes > Offers banner > "Default banner button text" (Tamil / English).
+- Existing offers keep working: every new option defaults to ON, so nothing disappears after the upgrade. Banner height / title size / button size in Display & Sizes still work.
+- Animations stop automatically if the phone has "reduce motion" on, or if Display & Sizes animation is set to Off / Light.
+
+# v4.12.0 - live sync, name always visible, duplicates removed, dead options fixed
+
+- **Live sync:** the customer website now follows the admin panel by itself - after you press Save, every open page updates within ~12 seconds (no refresh). It never interrupts a visitor who is reading an offer or filling a form.
+- **Shop name in the header** is shown by default (Display & Sizes > "Show the shop name in the header" to hide it).
+- **Options that did not work were fixed:** hero small tag (English), offer-page item prices switch. The dead "EST. word" box in Header & Footer was removed (it lives in Store Settings).
+- **Duplicate options removed:** announcement (only in Header & Footer), footer / copyright / credit (only in Header & Footer), section titles (each one only on its own page), products-on-home count (only in Home Page Settings > Product Showcase).
+- Every text option in admin (about 160) was tested automatically: it appears on the customer website.
+
+# v4.11.1 - fixes: banner fits phones, logo-left/name-centre header, editable leave box, admin menu in website order
+
+# v4.11.0 - offers swipe banner, products page, safer backup/restore, back button
+
+- **Swipe offers banner (top of the website):** every live offer is a themed slide (Diwali, Pongal, Christmas, Eid, Sale...). Customers swipe left/right (arrows + dots on computers); it also slides by itself. Tap = opens the offer. Admin > Display & Sizes > "Offers banner": on/off, auto-slide seconds, button on/off, height and text sizes. Each offer has "Also show in the swipe banner" (Offers & Festivals).
+- **Products on the home page:** Admin > Display & Sizes (or Home Page Settings > Product Showcase) > "How many products to show" (0 = all). "View All Products" opens a full products page (search + category filter); Back returns to the normal page.
+- **Backup & Restore:** progress bar with % and a Cancel button for download and restore. Restore now takes every valid file in the ZIP, skips wrong/damaged files automatically (it never stops), picks the correct content file by itself and lists what was skipped.
+- **Keep-awake:** "Reset counter to 0" button; the "${ka.minutes || 8}" text bug is fixed.
+- **Shop name:** spelled **"Classix Home Needs"** everywhere (customer site, admin, saved data).
+- **Admin loading screen** shows the shop logo.
+- **Back button (website + admin):** closes the popup / photo / offer page / menu first, goes to the previous admin page with a slide effect, and never throws the visitor out - a "Leave?" box (Stay / Exit) appears instead.
+- **More controls (Display & Sizes):** shop name size (English/Tamil), name wrap, language button, menu button, quick-menu pills, announcement text, all button sizes, product name/description/price, section headings, footer text.
+
+# v4.10.1 - Visitor Stats upgrade (no location, Graph view)
+
+- **Admin > Visitor Stats rebuilt.** Choose Today, Yesterday, 7 / 14 / 30 / 90 days, This month, All time, or **Pick dates** (any From-To, or tap a bar / use "See one day" to look at a single date). A "compare with the period before" switch shows ▲ / ▼ percentages.
+- **Boxes (11 options):** summary numbers, day-by-day chart, New vs returning, Phone / computer, Browser, Where visitors came from (Google, Facebook, Instagram, WhatsApp / direct, or your own `?src=poster` links / QR codes), Website sections viewed, Top products, Top offers, Top gallery photos.
+- **Graph view / List view:** one button switches every box between charts (line graph for days, round charts for the rest) and simple lists.
+- **Customize this page:** tick / untick any box you do not want to see (saved in your browser).
+- **Delete visitor data:** delete one day, everything before a date, the dates currently shown, or **ALL and start fresh from zero**. Products, offers and settings are never touched.
+- **No location, no IP:** this version does not look up or store where a visitor is. Only counts are saved (no name, phone, IP).
+- New counters start from the day you install this version (older days keep only their visitor and page-view counts).
 
 # v4.9.3
 

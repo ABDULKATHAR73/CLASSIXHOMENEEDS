@@ -1,7 +1,7 @@
 {
  "v": 1,
  "shop": {
-  "name": "Classic Home Needs",
+  "name": "Classix Home Needs",
   "nameTa": "கிளாசிக் ஹோம் நீட்ஸ்",
   "city": "Natham",
   "est": "2018",
@@ -103,7 +103,7 @@
   "aboutTitleTa": "எங்கள் கடை பற்றி",
   "aboutTitleEn": "About Our Store",
   "aboutTa": "2018-ல் நத்தத்தில் தொடங்கப்பட்ட கிளாசிக் ஹோம் நீட்ஸ், வீட்டிற்குத் தேவையான பிளாஸ்டிக் பொருட்கள், சமையலறை சாதனங்கள், சுத்தம் செய்யும் பொருட்கள், பரிசுப் பொருட்கள், பொம்மைகள், எழுதுபொருட்கள் என அனைத்தையும் ஒரே கூரையின் கீழ் வழங்குகிறது. தரமான பொருட்கள், நியாயமான விலை, அன்பான சேவை — இதுவே எங்கள் வாக்குறுதி.",
-  "aboutEn": "Started in Natham in 2018, Classic Home Needs brings plasticware, kitchen items, cleaning products, gifts, toys and stationery together under one roof. Honest quality, fair prices and friendly service are our promise to every customer, retail or wholesale.",
+  "aboutEn": "Started in Natham in 2018, Classix Home Needs brings plasticware, kitchen items, cleaning products, gifts, toys and stationery together under one roof. Honest quality, fair prices and friendly service are our promise to every customer, retail or wholesale.",
   "aboutImage": "/uploads/k0.jpg",
   "contactTitleTa": "தொடர்புக்கு & கடைக்கு வாருங்கள்",
   "contactTitleEn": "Contact & Visit Us",
@@ -111,12 +111,12 @@
   "contactSubEn": "Call or WhatsApp us for prices, availability and wholesale details",
   "footerTextTa": "வீட்டிற்கு தேவையான அனைத்தும் — சில்லறை & மொத்தம்",
   "footerTextEn": "Everything for your home — retail & wholesale",
-  "copyright": "© Classic Home Needs, Natham. All rights reserved.",
+  "copyright": "© Classix Home Needs, Natham. All rights reserved.",
   "creatorName": "ABDUL KATHAR",
   "creatorPhone": "8248145181",
   "waButton": true,
   "waLabel": "WhatsApp Us",
-  "waMessage": "Hi Classic Home Needs, Natham. I would like to know more about your products.",
+  "waMessage": "Hi Classix Home Needs, Natham. I would like to know more about your products.",
   "logo": "/uploads/classix-logo.png",
   "uiLogoText": false,
   "uiFabLabel": false,
@@ -1079,7 +1079,7 @@
    "id": "t3",
    "name": "Priya Sundaram",
    "role": "Mother of Two",
-   "textEn": "My kids love the toy collection! Always something new. Classic Home Needs is our go-to store every festival season.",
+   "textEn": "My kids love the toy collection! Always something new. Classix Home Needs is our go-to store every festival season.",
    "textTa": "என் குழந்தைகளுக்கு பொம்மைகள் மிகவும் பிடிக்கும்! எப்போதும் புதிதாக ஏதாவது இருக்கும்."
   }
  ]

@@ -1,6 +1,6 @@
 'use strict';
 /*
- * Classic Home Needs – website server (no external dependencies, Node 18+)
+ * Classix Home Needs – website server (no external dependencies, Node 18+)
  *
  *   Customer site : /                      (read-only, never links to the admin)
  *   Admin panel   : ADMIN_PATH (default /admin)
@@ -50,7 +50,7 @@ const MAX_JSON = 6 * 1024 * 1024;
 const MAX_UPLOAD = 12 * 1024 * 1024; /* 12 MB per file (phone HEIC photos are converted + shrunk on the server) */
 const MAX_BACKUP_UPLOAD = 100 * 1024 * 1024;
 const SESSION_MS = 12 * 60 * 60 * 1000;
-const KEEP_BACKUPS = 10;
+const KEEP_BACKUPS = 40;
 const APP_VERSION = (() => { try { return require('./package.json').version; } catch { return ''; } })();
 
 /* ----------------------------------------------------------------- helpers */
@@ -158,6 +158,10 @@ function normalize(c) {
   o.v = Number(c && c.v) || 1;
   for (const k of ['shop', 'site', 'social']) o[k] = { ...(d[k] || {}), ...((c && typeof c[k] === 'object' && c[k]) || {}) };
   o.social.whatsappGroup = cleanWaGroup(o.social.whatsappGroup);
+  if (o.site.heroTagEn === undefined && o.site.heroTag) o.site.heroTagEn = o.site.heroTag;   /* the admin edits heroTagEn; keep older saved data working */
+  { const fixName = v => typeof v === 'string' ? v.replace(/Classic Home Needs/gi, 'Classix Home Needs') : v;   /* the shop name is spelled "Classix Home Needs" */
+    o.shop.name = fixName(o.shop.name); o.shop.mapQuery = fixName(o.shop.mapQuery);
+    for (const k of Object.keys(o.site)) if (typeof o.site[k] === 'string') o.site[k] = fixName(o.site[k]); }
   o.social.whatsappGroupOn = !(o.social.whatsappGroupOn === false || o.social.whatsappGroupOn === 'false' || o.social.whatsappGroupOn === 0);   /* ON by default; old data keeps working */
   if (o.site.typo) o.site.typo = T.sanitize(o.site);
   for (const k of ['categories', 'slides', 'offers', 'why', 'stats', 'strips', 'galleryCategories', 'gallery', 'products', 'testimonials']) {
@@ -234,7 +238,7 @@ function validate(c) {
 
 /* One-time upgrade of data saved by older versions (a backup copy is made first).
    v6: new default logo, and newest-first order for offers and gallery photos. */
-const MIGRATION = 7;
+const MIGRATION = 8;
 /* v7 offers: one clean structure (theme, tagline, price + old price, items with photo / qty / price, terms, countdown) */
 const OFFER_THEMES = ['special', 'diwali', 'pongal', 'puthandu', 'christmas', 'eid', 'newyear', 'sale', 'wholesale', 'new', 'gift'];
 function offerV7(o, products) {
@@ -257,6 +261,7 @@ async function migrateRaw(raw) {
   if (!raw.site.logo || raw.site.logo === OLD_DEFAULT_LOGO) { raw.site.logo = DEFAULT_LOGO; raw.site.uiLogoText = false; }
   if ((Number(raw.site.mig) || 0) < 6) { if (Array.isArray(raw.offers)) raw.offers.reverse(); if (Array.isArray(raw.gallery)) raw.gallery.reverse(); }
   if (Array.isArray(raw.offers)) raw.offers = raw.offers.map(o => offerV7(o, raw.products));
+  if ((Number(raw.site.mig) || 0) < 8) { raw.site.uiNameShow = true; delete raw.site.exitName; delete raw.site.exitNameTa; }   // v4.16: shop name is ON by default; the leave box always uses the shop name
   raw.site.mig = MIGRATION;
   await writeJSONAtomic(CONTENT_FILE, raw);
   return raw;
@@ -357,27 +362,77 @@ const sha256 = x => crypto.createHash('sha256').update(String(x)).digest('hex');
 const STATS_FILE = path.join(DATA_DIR, 'stats.json');
 const TZ_MIN = Number(process.env.STATS_TZ_OFFSET_MIN || 330);       // minutes ahead of UTC (330 = India)
 const dayKey = (ms = Date.now()) => new Date(ms + TZ_MIN * 60000).toISOString().slice(0, 10);
-let stats = { total: { views: 0, visitors: 0 }, seen: {}, days: {} };   // seen: visitorHash -> 1 ; days[d] = {views, ids:[hash]}
+/* seen: visitorHash -> 1 (ever)   days[d] = { views, visitors, ids:[hash], nw, rt, dev:{}, br:{}, src:{}, items:{}, secs:{} }
+   labels: item key -> readable name      since: day the counting (re)started */
+let stats = { total: { views: 0, visitors: 0 }, seen: {}, days: {}, labels: {}, since: '' };
 const live = new Map(), hitRate = new Map(); let statsDirty = false;
 const vhash = s => crypto.createHash('sha256').update('cx|' + s).digest('hex').slice(0, 14);
-function loadStats() { try { const j = JSON.parse(fs.readFileSync(STATS_FILE, 'utf8')); if (j && j.days) stats = { total: j.total || { views: 0, visitors: 0 }, seen: j.seen || {}, days: j.days }; } catch { /* first run */ } }
+function loadStats() {
+  try {
+    const j = JSON.parse(fs.readFileSync(STATS_FILE, 'utf8'));
+    if (j && j.days) { stats = { total: j.total || { views: 0, visitors: 0 }, seen: j.seen || {}, days: j.days, labels: j.labels || {}, since: j.since || '' }; for (const d of Object.values(stats.days)) delete d.area; }   // old place data from earlier test versions is dropped
+  } catch { /* first run */ }
+}
+const DIM_KEYS = ['dev', 'br', 'src', 'items', 'secs'];
 function saveStats() {
   if (!statsDirty) return; statsDirty = false;
   const keep = Object.keys(stats.days).sort().slice(-800); const d = {}; for (const k of keep) d[k] = stats.days[k];
-  const cut = dayKey(Date.now() - 70 * 86400000); for (const k of Object.keys(d)) if (k < cut && d[k].ids) { d[k] = { views: d[k].views, visitors: d[k].visitors ?? d[k].ids.length }; }
+  const cut = dayKey(Date.now() - 70 * 86400000);
+  for (const k of Object.keys(d)) if (k < cut && d[k].ids) { const o = { views: d[k].views, visitors: d[k].visitors ?? d[k].ids.length, nw: d[k].nw || 0, rt: d[k].rt || 0 }; for (const m of DIM_KEYS) if (d[k][m]) o[m] = d[k][m]; d[k] = o; }
   stats.days = d;
   const tmp = STATS_FILE + '.tmp'; try { fs.writeFileSync(tmp, JSON.stringify(stats)); fs.renameSync(tmp, STATS_FILE); } catch (e) { console.error('stats save failed', e.message); }
+}
+/* add 1 to a counter map; a map never grows past 150 different names (the rest go to "Other") */
+const bump = (o, k, n = 1) => { k = String(k).slice(0, 60); if (!(k in o) && Object.keys(o).length >= 150) k = 'Other'; o[k] = (o[k] || 0) + n; };
+function parseUA(ua, touch) {
+  let os = 'Other';
+  if (/iPhone|iPod/.test(ua)) os = 'iPhone'; else if (/iPad/.test(ua)) os = 'iPad'; else if (/Android/.test(ua)) os = 'Android';
+  else if (/Windows/.test(ua)) os = 'Windows'; else if (/Macintosh|Mac OS X/.test(ua)) os = touch > 1 ? 'iPad' : 'Mac';
+  else if (/CrOS/.test(ua)) os = 'Chromebook'; else if (/Linux|X11/.test(ua)) os = 'Linux';
+  let br = 'Other';
+  if (/FBAN|FBAV/.test(ua)) br = 'Facebook app'; else if (/Instagram/.test(ua)) br = 'Instagram app'; else if (/EdgA?\/|Edg\//.test(ua)) br = 'Edge';
+  else if (/OPR\/|Opera|OPT\//.test(ua)) br = 'Opera'; else if (/SamsungBrowser/.test(ua)) br = 'Samsung Internet'; else if (/UCBrowser/.test(ua)) br = 'UC Browser';
+  else if (/Firefox|FxiOS/.test(ua)) br = 'Firefox'; else if (/CriOS|Chrome\//.test(ua)) br = 'Chrome'; else if (/Safari\//.test(ua)) br = 'Safari';
+  return { os, br };
+}
+/* where did the visitor come from: ?src=… / utm_source (QR codes, posters, ads) first, then the referring website */
+function sourceOf(req, body) {
+  const tag = String(body.s || '').toLowerCase().replace(/[^\w.-]/g, '').slice(0, 24); if (tag) return 'Link: ' + tag;
+  let h = String(body.r || '').toLowerCase().replace(/^www\./, '').replace(/[^\w.-]/g, '').slice(0, 80); if (!h) return 'Direct / WhatsApp / typed';
+  const own = String(req.headers.host || '').toLowerCase().replace(/^www\./, ''); if (h === own) return 'Direct / WhatsApp / typed';
+  if (/google\./.test(h)) return 'Google'; if (/bing\.com|duckduckgo|yahoo\./.test(h)) return 'Other search'; if (/facebook\.com|fb\.com|fb\.me/.test(h)) return 'Facebook';
+  if (/instagram\.com/.test(h)) return 'Instagram'; if (/whatsapp|wa\.me/.test(h)) return 'WhatsApp'; if (/youtube\.com|youtu\.be/.test(h)) return 'YouTube';
+  if (/(^|\.)t\.co$|twitter\.com|x\.com/.test(h)) return 'X / Twitter'; if (/t\.me|telegram/.test(h)) return 'Telegram';
+  return h;
 }
 function recordHit(req, body) {
   const ua = String(req.headers['user-agent'] || ''); if (!ua || /bot|crawl|spider|slurp|preview|curl|wget|facebookexternalhit|monitor|uptime/i.test(ua)) return;
   const ip = clientIp(req), now = Date.now(); const r = hitRate.get(ip) || { n: 0, t: now }; if (now - r.t > 60000) { r.n = 0; r.t = now; } if (++r.n > 90) return; hitRate.set(ip, r);
   const raw = String(body.v || '').replace(/[^\w-]/g, '').slice(0, 40); if (raw.length < 8) return;
   const id = vhash(raw); live.set(id, now);
-  if (body.t !== 'view') return;
-  const k = dayKey(now), d = stats.days[k] || (stats.days[k] = { views: 0, ids: [], visitors: 0 });
+  const t = body.t, k = dayKey(now);
+  if (t === 'item' || t === 'sec') {                                  // which product / offer / photo / section was opened
+    const key = String(body.k || ''); const day = stats.days[k]; if (!day) return;   // only after the visit itself was counted
+    if (t === 'item') {
+      if (!/^[pog]:[\w-]{1,40}$/.test(key)) return;
+      day.items = day.items || {}; bump(day.items, key);
+      const lb = String(body.n || '').replace(/[<>]/g, '').slice(0, 80); if (lb && (stats.labels[key] || Object.keys(stats.labels).length < 800)) stats.labels[key] = lb;
+    } else { if (!/^[a-z][\w-]{0,29}$/.test(key)) return; day.secs = day.secs || {}; bump(day.secs, key); }
+    statsDirty = true; return;
+  }
+  if (t !== 'view') return;
+  const d = stats.days[k] || (stats.days[k] = { views: 0, ids: [], visitors: 0 });
   if (!d.ids) d.ids = [];
   d.views++; stats.total.views++;
-  if (!d.ids.includes(id)) { d.ids.push(id); d.visitors = d.ids.length; }
+  if (!stats.since) stats.since = k;
+  if (!d.ids.includes(id)) {                                          // first time this visitor is seen today
+    const wasSeen = !!stats.seen[id];
+    d.ids.push(id); d.visitors = d.ids.length;
+    if (wasSeen) d.rt = (d.rt || 0) + 1; else d.nw = (d.nw || 0) + 1;
+    const dv = parseUA(ua, Number(body.tp) || 0);
+    d.dev = d.dev || {}; bump(d.dev, dv.os); d.br = d.br || {}; bump(d.br, dv.br);
+    d.src = d.src || {}; bump(d.src, sourceOf(req, body));
+  }
   if (!stats.seen[id]) { stats.seen[id] = 1; stats.total.visitors++; }
   statsDirty = true;
 }
@@ -387,6 +442,56 @@ function statsSummary() {
   const days = Array.from({ length: 14 }, (_, i) => { const k = dayKey(now - (13 - i) * 86400000), d = stats.days[k] || {}; return { date: k, views: d.views || 0, visitors: d.ids ? d.ids.length : (d.visitors || 0) }; });
   let liveN = 0; for (const [id, ts] of live) { if (now - ts < 75000) liveN++; else if (now - ts > 600000) live.delete(id); }
   return { live: liveN, today: agg(k => k === today), d7: agg(k => d7.has(k)), d30: agg(k => d30.has(k)), month: agg(k => k.startsWith(month)), total: { ...stats.total }, days, tz: TZ_MIN };
+}
+/* ---- report for any date range (admin "Visitor Stats" page) ---- */
+const isDay = s => /^\d{4}-\d{2}-\d{2}$/.test(String(s)) && !isNaN(Date.parse(s + 'T00:00:00Z'));
+const addDays = (k, n) => new Date(Date.parse(k + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
+const dayList = (from, to) => { const out = []; for (let k = from; k <= to && out.length < 800; k = addDays(k, 1)) out.push(k); return out; };
+function aggDays(keys) {
+  const o = { views: 0, visitors: 0, nw: 0, rt: 0, dev: {}, br: {}, src: {}, items: {}, secs: {} }, ids = new Set(); let extra = 0;
+  for (const k of keys) {
+    const d = stats.days[k]; if (!d) continue;
+    o.views += d.views || 0; o.nw += d.nw || 0; o.rt += d.rt || 0;
+    if (d.ids) d.ids.forEach(x => ids.add(x)); else extra += d.visitors || 0;
+    for (const m of DIM_KEYS) if (d[m]) for (const [n, v] of Object.entries(d[m])) o[m][n] = (o[m][n] || 0) + v;
+  }
+  o.visitors = ids.size + extra; return o;
+}
+const topList = (m, n = 15) => Object.entries(m).map(([name, v]) => ({ name, n: v })).sort((a, b) => b.n - a.n).slice(0, n);
+function statsReport(from, to) {
+  const today = dayKey(); if (!isDay(to)) to = today; if (!isDay(from)) from = addDays(to, -6);
+  if (from > to) [from, to] = [to, from];
+  if (Date.parse(to) - Date.parse(from) > 400 * 86400000) from = addDays(to, -400);
+  const keys = dayList(from, to), len = keys.length, pFrom = addDays(from, -len), pTo = addDays(from, -1);
+  const cur = aggDays(keys), prev = aggDays(dayList(pFrom, pTo));
+  const series = keys.map(k => { const d = stats.days[k] || {}; return { date: k, views: d.views || 0, visitors: d.ids ? d.ids.length : (d.visitors || 0) }; });
+  const items = { p: [], o: [], g: [] };
+  for (const [key, v] of Object.entries(cur.items)) { const ty = key[0]; if (items[ty]) items[ty].push({ key, name: stats.labels[key] || key.slice(2), n: v }); }
+  for (const ty of Object.keys(items)) items[ty] = items[ty].sort((a, b) => b.n - a.n).slice(0, 15);
+  const stored = Object.keys(stats.days).sort(); let liveN = 0; const now = Date.now(); for (const ts of live.values()) if (now - ts < 75000) liveN++;
+  return {
+    from, to, len, today, live: liveN, since: stats.since || stored[0] || '', storedDays: stored.length, firstDay: stored[0] || '', lastDay: stored[stored.length - 1] || '',
+    cur: { views: cur.views, visitors: cur.visitors, nw: cur.nw, rt: cur.rt }, prev: { from: pFrom, to: pTo, views: prev.views, visitors: prev.visitors, nw: prev.nw, rt: prev.rt },
+    series, dev: topList(cur.dev, 12), br: topList(cur.br, 12), src: topList(cur.src, 12), secs: topList(cur.secs, 20), items, total: { ...stats.total }
+  };
+}
+function recomputeTotals() {
+  const a = aggDays(Object.keys(stats.days)); stats.total = { views: a.views, visitors: a.visitors };
+  const first = Object.keys(stats.days).sort()[0]; stats.since = first || '';
+}
+function deleteStats(b) {
+  const mode = String(b.mode || '');
+  if (mode === 'all') { stats = { total: { views: 0, visitors: 0 }, seen: {}, days: {}, labels: {}, since: '' }; live.clear(); }
+  else {
+    let del;
+    if (mode === 'day' && isDay(b.date)) del = k => k === b.date;
+    else if (mode === 'before' && isDay(b.date)) del = k => k < b.date;
+    else if (mode === 'range' && isDay(b.from) && isDay(b.to)) del = k => k >= b.from && k <= b.to;
+    else return false;
+    for (const k of Object.keys(stats.days)) if (del(k)) delete stats.days[k];
+    recomputeTotals();
+  }
+  statsDirty = true; saveStats(); return true;
 }
 loadStats(); setInterval(saveStats, 10000).unref(); setInterval(() => { const n = Date.now(); for (const [k, v] of hitRate) if (n - v.t > 120000) hitRate.delete(k); }, 120000).unref();
 for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { saveStats(); let done = false; const bye = () => { if (!done) { done = true; process.exit(0); } }; setTimeout(bye, 9500); cloud.flush(9000).then(bye, bye); });
@@ -415,21 +520,52 @@ function makeZip(entries) {
   return Buffer.concat([local,central,end]);
 }
 function readZip(buf) {
-  const out = new Map(); let p = 0, count = 0;
-  while (p + 30 <= buf.length && buf.readUInt32LE(p) === 0x04034b50) {
-    if (++count > 10000) throw new Error('Too many files in ZIP');
-    const flags=buf.readUInt16LE(p+6), method=buf.readUInt16LE(p+8), crc=buf.readUInt32LE(p+14), csize=buf.readUInt32LE(p+18), usize=buf.readUInt32LE(p+22), nl=buf.readUInt16LE(p+26), el=buf.readUInt16LE(p+28);
-    if (flags & 1) throw new Error('Encrypted ZIP files are not supported');
-    const start=p+30, name=buf.subarray(start,start+nl).toString('utf8'); const dataStart=start+nl+el, dataEnd=dataStart+csize;
-    const unsafe = !name || name.startsWith('/') || name.includes('\\') || name.split('/').some(x => x === '..');   /* skipped, never fatal */
-    if (dataEnd > buf.length || usize > MAX_BACKUP_UPLOAD) throw new Error('Invalid or oversized ZIP entry');
-    const comp=buf.subarray(dataStart,dataEnd); let data;
-    if (method===0) data=Buffer.from(comp); else if (method===8) data=zlib.inflateRawSync(comp); else throw new Error('Unsupported ZIP compression');
-    if (data.length !== usize || crc32(data) !== crc) throw new Error('ZIP integrity check failed');
-    if (!unsafe && !name.endsWith('/')) out.set(name,data);   /* a repeated name: the last one wins */
-    p=dataEnd;
+  /* Tolerant reader: uses the ZIP's central directory (works with ZIPs made by phones, Windows, macOS, WhatsApp, etc.).
+     A damaged / unsupported / unsafe file is skipped and listed in out.bad - it never stops the whole restore. */
+  const out = new Map(); out.bad = [];
+  const short = n => String(n).split('/').pop().slice(0, 60);
+  const take = (name, method, flags, crc, csize, usize, dataStart) => {
+    if (!name || name.endsWith('/') || /(^|\/)(__MACOSX|\.DS_Store)/.test(name)) return;
+    if (name.startsWith('/') || name.includes('\\') || name.split('/').some(x => x === '..')) return;
+    try {
+      if (flags & 1) throw new Error('encrypted');
+      if (dataStart + csize > buf.length || usize > MAX_BACKUP_UPLOAD) throw new Error('cut');
+      const comp = buf.subarray(dataStart, dataStart + csize); let data;
+      if (method === 0) data = Buffer.from(comp); else if (method === 8) data = zlib.inflateRawSync(comp); else throw new Error('method');
+      if (crc32(data) !== crc) throw new Error('crc');
+      out.set(name, data);   /* a repeated name: the last one wins */
+    } catch { out.bad.push(short(name)); }
+  };
+  let entries = [];
+  try {
+    let e = -1; for (let i = buf.length - 22; i >= Math.max(0, buf.length - 65557); i--) if (buf.readUInt32LE(i) === 0x06054b50) { e = i; break; }
+    if (e >= 0) {
+      const n = buf.readUInt16LE(e + 10); let p = buf.readUInt32LE(e + 16);
+      for (let k = 0; k < n && p + 46 <= buf.length && buf.readUInt32LE(p) === 0x02014b50; k++) {
+        const nl = buf.readUInt16LE(p + 28), el = buf.readUInt16LE(p + 30), cl = buf.readUInt16LE(p + 32);
+        entries.push({ flags: buf.readUInt16LE(p + 8), method: buf.readUInt16LE(p + 10), crc: buf.readUInt32LE(p + 16), csize: buf.readUInt32LE(p + 20), usize: buf.readUInt32LE(p + 24), lho: buf.readUInt32LE(p + 42), name: buf.subarray(p + 46, p + 46 + nl).toString('utf8') });
+        p += 46 + nl + el + cl;
+      }
+    }
+  } catch { entries = []; }
+  if (entries.length) {
+    if (entries.length > 20000) entries.length = 20000;
+    for (const x of entries) {
+      try {
+        if (x.lho + 30 > buf.length || buf.readUInt32LE(x.lho) !== 0x04034b50) throw new Error('header');
+        take(x.name, x.method, x.flags, x.crc, x.csize, x.usize, x.lho + 30 + buf.readUInt16LE(x.lho + 26) + buf.readUInt16LE(x.lho + 28));
+      } catch { out.bad.push(short(x.name)); }
+    }
+  } else {   /* no central directory (cut-off file): read the entries one after another as far as possible */
+    let p = 0, count = 0;
+    while (p + 30 <= buf.length && buf.readUInt32LE(p) === 0x04034b50 && ++count <= 20000) {
+      const flags = buf.readUInt16LE(p + 6), method = buf.readUInt16LE(p + 8), crc = buf.readUInt32LE(p + 14), csize = buf.readUInt32LE(p + 18), usize = buf.readUInt32LE(p + 22), nl = buf.readUInt16LE(p + 26), el = buf.readUInt16LE(p + 28);
+      if (flags & 8) break;   /* sizes unknown without the central directory */
+      const name = buf.subarray(p + 30, p + 30 + nl).toString('utf8'), ds = p + 30 + nl + el;
+      take(name, method, flags, crc, csize, usize, ds); p = ds + csize;
+    }
   }
-  if (!out.size) throw new Error('No files found in ZIP');
+  if (!out.size) throw new Error('no readable files inside');
   return out;
 }
 /* ----------------------------------------------------------- customer reviews */
@@ -503,21 +639,128 @@ async function reviewsAdmin(req, res, route, method) {
   return sendJSON(req, res, 405, { error: 'Method not allowed' });
 }
 
-async function fullBackupZip(includeAuth) {
-  const entries=[];
-  const add=async (file, name) => { if (await exists(file)) entries.push({name, data: await fsp.readFile(file)}); };
-  await add(CONTENT_FILE,'data/content.json'); await add(STATS_FILE,'data/stats.json'); await add(REVIEWS_FILE,'data/reviews.json');
-  if (includeAuth) await add(AUTH_FILE,'data/admin.json');   /* optional: admin username + password HASHES (never plain passwords) */
+const RP = { active: false, kind: '', phase: '', done: 0, total: 0, cancel: false };   /* backup / restore progress (read by the admin panel) */
+async function fullBackupZip(includeAuth, track) {
+  const list = [];
+  const addF = async (file, name) => { if (await exists(file)) list.push({ file, name }); };
+  await addF(CONTENT_FILE,'data/content.json'); await addF(STATS_FILE,'data/stats.json'); await addF(REVIEWS_FILE,'data/reviews.json');
+  if (includeAuth) await addF(AUTH_FILE,'data/admin.json');   /* optional: admin username + password HASHES (never plain passwords) */
   for (const dir of [UPLOAD_DIR, BACKUP_DIR]) {
     if (!(await exists(dir))) continue;
     for (const f of await fsp.readdir(dir)) {
       if (dir===BACKUP_DIR && !/^content-[\w.-]+\.json$/.test(f)) continue;
-      const fp=path.join(dir,f); if ((await fsp.stat(fp)).isFile()) entries.push({name:(dir===UPLOAD_DIR?'data/uploads/':'data/backups/')+f,data:await fsp.readFile(fp)});
+      const fp=path.join(dir,f); try { if ((await fsp.stat(fp)).isFile()) list.push({ file: fp, name: (dir===UPLOAD_DIR?'data/uploads/':'data/backups/')+f }); } catch { /* skip */ }
     }
   }
-  entries.push({name:'manifest.json',data:JSON.stringify({app:'classix-home-needs',appVersion:APP_VERSION,backupFormat:2,created:new Date().toISOString(),includesAdminLogin:!!includeAuth},null,1)});
-  entries.push({name:'BACKUP-INFO.txt',data:'Classic Home Needs full data backup. Includes ALL website content and settings (shop details, offers, products, gallery, social links, WhatsApp group switch, typography, menu), every uploaded photo/PDF, customer reviews, visitor statistics and content-version backups.'+(includeAuth?' It ALSO contains the admin login (username + hashed passwords) - keep this ZIP private.':' The admin login is NOT included (a restore keeps the current admin password).')+' Restore: Admin > Backup & Security > Restore full backup (.zip) - works on this site or on a brand-new copy of the website.\n'});
-  return makeZip(entries);
+  if (track) { RP.active = true; RP.kind = 'export'; RP.phase = 'Collecting files'; RP.done = 0; RP.total = list.length; RP.cancel = false; }
+  const entries=[];
+  try {
+    for (const it of list) { try { entries.push({ name: it.name, data: await fsp.readFile(it.file) }); } catch { /* unreadable file is skipped */ } if (track) RP.done++; }
+    entries.push({name:'manifest.json',data:JSON.stringify({app:'classix-home-needs',appVersion:APP_VERSION,backupFormat:2,created:new Date().toISOString(),includesAdminLogin:!!includeAuth},null,1)});
+    entries.push({name:'BACKUP-INFO.txt',data:'Classix Home Needs full data backup. Includes ALL website content and settings (shop details, offers, products, gallery, social links, WhatsApp group switch, typography, menu, sizes), every uploaded photo/PDF, customer reviews, visitor statistics and content-version backups.'+(includeAuth?' It ALSO contains the admin login (username + hashed passwords) - keep this ZIP private.':'')});
+    if (track) RP.phase = 'Packing the ZIP';
+    return makeZip(entries);
+  } finally { if (track) { RP.active = false; RP.phase = 'Ready to download'; } }
+}
+
+/* Restore a backup ZIP. Tolerant by design: every readable, valid file is restored; damaged / unknown / unsafe files are skipped
+   (and listed in the warnings); the restore never stops because one file is wrong. */
+const trim60 = n => String(n).split('/').pop().slice(0, 60);
+function repairContent(c) {   /* fix the things validate() rejects, so a slightly-off backup can still be restored */
+  const bad = v => v !== null && v !== undefined && v !== '' && (!isFinite(Number(v)) || Number(v) < 0);
+  try {
+    if (!strOf(c.shop, 'name').trim()) c.shop.name = (SEED && SEED.shop && SEED.shop.name) || 'Classix Home Needs';
+    if (strOf(c.social, 'whatsappGroup').trim() && !WA_RE.test(strOf(c.social, 'whatsappGroup').trim())) c.social.whatsappGroup = '';
+    const em = strOf(c.shop, 'email').trim(); if (em && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) c.shop.email = '';
+    const wn = strOf(c.shop, 'whatsapp').replace(/\D/g, ''); if (strOf(c.shop, 'whatsapp').trim() && (wn.length < 8 || wn.length > 15)) c.shop.whatsapp = '';
+    if (Array.isArray(c.shop.phones)) c.shop.phones = c.shop.phones.filter(ph => !String(ph).trim() || String(ph).replace(/\D/g, '').length >= 7);
+    const cl = strOf(c.site, 'creatorLink').trim(); if (cl && !/^https?:\/\/\S+$/i.test(cl)) c.site.creatorLink = '';
+    for (const k of ['facebook', 'instagram', 'youtube', 'website']) { const v = strOf(c.social, k).trim(); if (v && !/^https?:\/\/[^\s]+$/i.test(v)) c.social[k] = ''; }
+    c.products = (c.products || []).filter(p => p && typeof p === 'object' && p.id && String(p.name || '').trim());
+    const ids = new Set(); c.products = c.products.filter(p => { if (ids.has(p.id)) return false; ids.add(p.id); return true; });
+    for (const p of c.products) for (const k of ['price', 'mrp']) if (bad(p[k])) p[k] = '';
+    for (const o of c.offers || []) if (o) for (const k of ['startDate', 'endDate']) if (o[k] && !/^\d{4}-\d{2}-\d{2}$/.test(o[k])) o[k] = '';
+    for (const k of ['categories', 'gallery']) if (!Array.isArray(c[k])) c[k] = [];
+  } catch { /* validate() decides */ }
+  return c;
+}
+async function restoreBackup(req, res) {
+  if (RP.active && RP.kind === 'restore') return sendJSON(req, res, 409, { error: 'A restore is already running. Please wait a moment.' });
+  RP.active = true; RP.kind = 'restore'; RP.phase = 'Receiving the file'; RP.done = 0; RP.total = 0; RP.cancel = false;
+  try { return await restoreInner(req, res); } catch (e) { console.error('restore failed:', e); return sendJSON(req, res, 500, { error: 'The restore could not be completed: ' + (e && e.message || 'unknown problem') + '. Your current website was not damaged.' }); }
+  finally { RP.active = false; RP.phase = 'Finished'; }
+}
+async function restoreInner(req, res) {
+  let raw; try { raw = await readBody(req, MAX_BACKUP_UPLOAD); } catch (e) { return sendJSON(req, res, e.status || 400, { error: e.status === 413 ? 'This backup is larger than 100 MB.' : 'The upload was interrupted. Please try again.' }); }
+  RP.phase = 'Reading the ZIP';
+  let files; try { files = readZip(raw); } catch (e) { return sendJSON(req, res, 400, { error: 'This file could not be opened as a ZIP (' + e.message + '). Please choose another file.' }); }
+  const warnings = files.bad.map(n => 'Skipped damaged file: ' + n);
+  const wantAuth = new URL(req.url, 'http://x').searchParams.get('auth') === '1';
+  const cand = [], backupsJson = [], uploads = []; let statsObj = null, rvObj = null, authObj = null, skipped = files.bad.length;
+  const ignore = /(^|\/)(vendor|pdfjs|public|admin|lib|node_modules)\//;
+  for (const [name, data] of files) {
+    if (ignore.test(name)) continue;
+    const b = name.split('/').pop();
+    if (/\.json$/i.test(b)) {
+      let j; try { j = JSON.parse(data.toString('utf8').replace(/^\uFEFF/, '')); } catch { warnings.push('Skipped damaged file: ' + trim60(b)); skipped++; continue; }
+      if (!j || typeof j !== 'object' || Array.isArray(j)) continue;
+      if (/(^|\/)backups\/content-[\w.-]+\.json$/.test(name)) { if (j.shop && j.site) backupsJson.push([b, data]); continue; }
+      if (j.shop && j.site && typeof j.shop === 'object' && typeof j.site === 'object') { cand.push({ name, j, pref: /(^|\/)data\/content\.json$/.test(name) ? 3 : /(^|\/)content\.json$/.test(name) ? 2 : 1 }); continue; }
+      if (j.days && j.total && typeof j.days === 'object') { statsObj = statsObj || j; continue; }
+      if (Array.isArray(j.items) && j.items.some(r => r && typeof r.id === 'string' && typeof r.text === 'string')) { rvObj = rvObj || j; continue; }
+      if (j.user && j.s1 && j.h1) { authObj = authObj || j; continue; }
+      continue;   /* manifest or another harmless file */
+    }
+    if (/\.(jpe?g|png|webp|gif|pdf)$/i.test(b)) {
+      if (!/^[A-Za-z0-9._-]+$/.test(b) || b === '.' || b === '..') { warnings.push('Skipped file with an unsupported name: ' + trim60(b)); skipped++; continue; }
+      if (!sniff(data)) { warnings.push('Skipped a file that is not a real picture / PDF: ' + trim60(b)); skipped++; continue; }
+      if (!/(^|\/)uploads\//.test(name) && /(^|\/)(seed|assets|icons?)\//.test(name) && !/uploads/.test(name)) continue;
+      uploads.push([b, data]);
+    }
+  }
+  if (!cand.length && backupsJson.length) { backupsJson.sort((a, b) => (a[0] < b[0] ? 1 : -1)); try { cand.push({ name: backupsJson[0][0], j: JSON.parse(backupsJson[0][1].toString('utf8').replace(/^\uFEFF/, '')), pref: 0 }); } catch { /* none */ } }
+  cand.sort((a, b) => b.pref - a.pref || (Number(b.j.v) || 0) - (Number(a.j.v) || 0));
+  let normalized = null;
+  for (const cd of cand) {   /* the first file that is a valid website content file wins; the others are skipped */
+    try {
+      let n = normalize(cd.j), v = validate(n);
+      if (v) { const merged = { ...SEED, ...cd.j }; for (const k of Object.keys(SEED || {})) if (SEED[k] && typeof SEED[k] === 'object' && !Array.isArray(SEED[k]) && cd.j[k] && typeof cd.j[k] === 'object' && !Array.isArray(cd.j[k])) merged[k] = { ...SEED[k], ...cd.j[k] }; n = normalize(repairContent(merged)); v = validate(n); if (!v) warnings.push('Some settings in the backup were missing or invalid and were fixed automatically.'); }
+      if (!v) { normalized = n; break; }
+      warnings.push('Skipped a content file that could not be used: ' + trim60(cd.name)); skipped++;
+    } catch { warnings.push('Skipped a content file that could not be read: ' + trim60(cd.name)); skipped++; }
+  }
+  if (!normalized && !uploads.length && !statsObj && !rvObj && !(wantAuth && authObj)) return sendJSON(req, res, 400, { error: 'Nothing in this ZIP could be restored (no website content, pictures, statistics or reviews were found). Please choose a backup ZIP downloaded from this admin panel.' });
+  RP.total = uploads.length + backupsJson.length + 5; RP.done = 0;
+  RP.phase = 'Saving a safety copy'; 
+  try { await backupCurrent(); const oldZip = await fullBackupZip(true); await fsp.writeFile(path.join(BACKUP_DIR, `pre-restore-${Date.now()}.zip`), oldZip); const pre = (await fsp.readdir(BACKUP_DIR)).filter(f => /^pre-restore-\d+\.zip$/.test(f)).sort(); for (const f of pre.slice(0, Math.max(0, pre.length - 3))) await fsp.unlink(path.join(BACKUP_DIR, f)).catch(() => {}); } catch { /* the safety copy is a bonus - never block the restore */ }
+  RP.done++;
+  await fsp.mkdir(UPLOAD_DIR, { recursive: true }).catch(() => {}); await fsp.mkdir(BACKUP_DIR, { recursive: true }).catch(() => {});
+  RP.phase = 'Restoring pictures and PDFs'; let pics = 0;
+  for (const [b, data] of uploads) {   /* pictures first, so the content never points to a missing picture; existing uploads are kept */
+    if (RP.cancel) break;
+    try { await fsp.writeFile(path.join(UPLOAD_DIR, b), data); pics++; } catch { warnings.push('Could not save picture: ' + trim60(b)); skipped++; }
+    RP.done++;
+  }
+  if (RP.cancel) return sendJSON(req, res, 200, { ok: true, cancelled: true, message: 'Restore cancelled. Website content was NOT changed' + (pics ? ' (' + pics + ' pictures that were already copied were kept - they do no harm).' : '.') });
+  const did = [];
+  if (normalized) {
+    RP.phase = 'Restoring website content';
+    try { normalized.v = Math.max(Date.now(), (content && content.v || 0) + 1); await writeJSONAtomic(CONTENT_FILE, normalized); content = normalized; did.push('website content'); } catch { warnings.push('Website content could not be saved.'); }
+  } else warnings.push('No usable website content file was found - your current content was kept.');
+  RP.done++;
+  if (pics) did.push(pics + ' picture' + (pics > 1 ? 's' : '') + '/PDF' + (pics > 1 ? 's' : ''));
+  if (statsObj && statsObj.days && statsObj.total) { RP.phase = 'Restoring visitor statistics'; try { await writeJSONAtomic(STATS_FILE, statsObj); stats = statsObj; stats.labels = stats.labels || {}; stats.since = stats.since || ''; for (const d of Object.values(stats.days)) delete d.area; statsDirty = false; did.push('visitor statistics'); } catch { warnings.push('Visitor statistics could not be restored.'); } }
+  RP.done++;
+  if (rvObj) { RP.phase = 'Restoring reviews'; try { reviews = rvObj.items.filter(r => r && typeof r.id === 'string' && typeof r.name === 'string' && typeof r.text === 'string' && RV_STATUS.includes(r.status)).slice(0, 5000); await saveReviews(); did.push('reviews'); } catch { warnings.push('Reviews could not be restored.'); } }
+  RP.done++;
+  RP.phase = 'Restoring saved versions'; let bk = 0;
+  for (const [b, data] of backupsJson) { try { await fsp.writeFile(path.join(BACKUP_DIR, b), data); bk++; } catch { /* skip */ } RP.done++; }
+  if (bk) did.push(bk + ' saved versions');
+  let loggedOut = false, authRestored = false;
+  if (wantAuth && authObj) { try { if (authValid(authObj)) { auth = { user: authObj.user, s1: authObj.s1, h1: authObj.h1, s2: authObj.s2, h2: authObj.h2, mustChange: false, epoch: Date.now() }; await writeJSONAtomic(AUTH_FILE, auth); authMtime = (await fsp.stat(AUTH_FILE)).mtimeMs; sessions.clear(); loggedOut = true; authRestored = true; did.push('admin login'); } } catch { warnings.push('The admin login could not be restored - your current login was kept.'); } }
+  cloud.schedule(500);
+  const msg = 'Restored: ' + (did.length ? did.join(', ') : 'nothing new') + (skipped ? '. ' + skipped + ' wrong/damaged file' + (skipped > 1 ? 's were' : ' was') + ' skipped automatically.' : '.') + (authRestored ? ' Please sign in again with the backup\'s username and password.' : ' Your admin password was kept unchanged.');
+  return sendJSON(req, res, 200, { ok: true, loggedOut, skipped, warnings: warnings.slice(0, 12), message: msg, content });
 }
 
 /* -------------------------------------------------------------- admin API */
@@ -600,63 +843,15 @@ async function adminApi(req, res, route) {
   }
 
   if (route === '/backup/export' && method === 'GET') {
-    const zip = await fullBackupZip(new URL(req.url, 'http://x').searchParams.get('auth') === '1');
+    const zip = await fullBackupZip(new URL(req.url, 'http://x').searchParams.get('auth') === '1', true);
     const d = new Date();
     const stamp = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}-${String(d.getMinutes()).padStart(2,'0')}-${String(d.getSeconds()).padStart(2,'0')}`;
     return send(req, res, 200, zip, { 'Content-Type': 'application/zip', 'Content-Disposition': `attachment; filename="classix-home-needs-full-backup-${stamp}.zip"`, ...NO_STORE });
   }
-  if (route === '/backup/restore' && method === 'POST') {
-    const ct=String(req.headers['content-type']||''); if (!/application\/zip|application\/octet-stream/i.test(ct)) return sendJSON(req,res,415,{error:'Upload a ZIP backup file.'});
-    const raw=await readBody(req,MAX_BACKUP_UPLOAD); let files;
-    try { files=readZip(raw); } catch(e) { return sendJSON(req,res,400,{error:'Invalid backup ZIP: '+e.message}); }
-    /* Tolerant restore: accepts backups from any version, with or without a wrapping folder; never fails on small differences. */
-    { const names=[...files.keys()]; const hit=names.find(n=>/(^|\/)data\/content\.json$/.test(n)) || names.find(n=>/(^|\/)content\.json$/.test(n));
-      if (hit) { const pre=hit.replace(/data\/content\.json$|content\.json$/,''); const m=new Map();
-        for (const [n,d] of files) { let r=pre&&n.startsWith(pre)?n.slice(pre.length):n; if (!r.startsWith('data/') && /^(content|stats|reviews|admin)\.json$|^(uploads|backups)\//.test(r)) r='data/'+r; m.set(r,d); }
-        files=m; } }
-    const contentBuf=files.get('data/content.json'); if (!contentBuf) return sendJSON(req,res,400,{error:'This ZIP does not contain content.json, so it is not a website backup.'});
-    let incoming; try { incoming=JSON.parse(contentBuf.toString('utf8').replace(/^\uFEFF/,'')); } catch { return sendJSON(req,res,400,{error:'The backup content file is damaged (not valid JSON).'}); }
-    const warnings=[]; let normalized, validation;
-    try { normalized=normalize(incoming); validation=validate(normalized); } catch(e) { validation='unreadable ('+e.message+')'; }
-    if (validation) {   /* backup from an older/newer version: fill the gaps from the default content and try again */
-      try {
-        const merged={...SEED,...incoming};
-        for (const k of Object.keys(SEED)) if (SEED[k]&&typeof SEED[k]==='object'&&!Array.isArray(SEED[k])&&incoming[k]&&typeof incoming[k]==='object'&&!Array.isArray(incoming[k])) merged[k]={...SEED[k],...incoming[k]};
-        normalized=normalize(merged); validation=validate(normalized); if (!validation) warnings.push('Some settings were missing in the backup and were filled with defaults.');
-      } catch(e) { validation=validation||e.message; }
-    }
-    if (validation) return sendJSON(req,res,400,{error:'The backup could not be read: '+validation});
-    // Preserve the current state before applying anything; password file is intentionally never restored.
-    await backupCurrent();
-    const oldZip=await fullBackupZip(true); await fsp.writeFile(path.join(BACKUP_DIR,`pre-restore-${Date.now()}.zip`),oldZip).catch(()=>{});
-    try { const pre=(await fsp.readdir(BACKUP_DIR)).filter(f=>/^pre-restore-\d+\.zip$/.test(f)).sort(); for (const f of pre.slice(0,Math.max(0,pre.length-3))) await fsp.unlink(path.join(BACKUP_DIR,f)).catch(()=>{}); } catch { /* ignore */ }
-    const incomingUploads=[];
-    for (const [name,data] of files) {
-      if (!name.startsWith('data/uploads/') || name.length<=13) continue;
-      const base=name.slice(13);
-      if (!/^[A-Za-z0-9._-]+$/.test(base) || base==='.' || base==='..' || !sniff(data)) { warnings.push('Skipped unsupported file: '+base.slice(0,50)); continue; }
-      incomingUploads.push([name,data]);
-    }
-    await fsp.mkdir(UPLOAD_DIR,{recursive:true}); await fsp.mkdir(BACKUP_DIR,{recursive:true});
-    // Keep existing uploads too, so content referencing an image omitted from a partial ZIP cannot break the site.
-    for (const [name,data] of incomingUploads) await fsp.writeFile(path.join(UPLOAD_DIR,name.slice('data/uploads/'.length)),data);
-    normalized.v=Math.max(Date.now(),(content&&content.v||0)+1); /* newer than the live site so every visitor refreshes */
-    await writeJSONAtomic(CONTENT_FILE,normalized); content=normalized;
-    const statsBuf=files.get('data/stats.json'); if (statsBuf) { try { const st=JSON.parse(statsBuf.toString('utf8')); if (st && st.days && st.total) { await writeJSONAtomic(STATS_FILE,st); stats=st; statsDirty=false; } } catch { /* leave current stats untouched */ } }
-    const rvBuf=files.get('data/reviews.json'); if (rvBuf) { try { const j=JSON.parse(rvBuf.toString('utf8')); if (Array.isArray(j.items)) { reviews=j.items.filter(r=>r&&typeof r.id==='string'&&typeof r.name==='string'&&typeof r.text==='string'&&RV_STATUS.includes(r.status)).slice(0,5000); await saveReviews(); } } catch { /* keep current reviews */ } }
-    for (const [name,data] of files) {
-      if (name.startsWith('data/backups/') && /^data\/backups\/content-[\w.-]+\.json$/.test(name)) {
-        const base=name.slice('data/backups/'.length); try { JSON.parse(data.toString('utf8')); await fsp.writeFile(path.join(BACKUP_DIR,base),data); } catch { /* skip malformed historical backup */ }
-      }
-    }
-    let loggedOut=false, authRestored=false;
-    const authBuf=files.get('data/admin.json');
-    if (authBuf && new URL(req.url,'http://x').searchParams.get('auth')==='1') {
-      try { const a=JSON.parse(authBuf.toString('utf8')); if (authValid(a)) { auth={user:a.user,s1:a.s1,h1:a.h1,s2:a.s2,h2:a.h2,mustChange:false,epoch:Date.now()}; await writeJSONAtomic(AUTH_FILE,auth); authMtime=(await fsp.stat(AUTH_FILE)).mtimeMs; sessions.clear(); loggedOut=true; authRestored=true; } } catch { /* keep current login */ }
-    }
-    cloud.schedule(500);
-    return sendJSON(req,res,200,{ok:true,loggedOut,warnings:warnings.slice(0,10),message:(warnings.length?'Restored (with small notes: '+warnings.slice(0,3).join(' ')+') ':'')+(authRestored?'Backup restored including the admin login. Please sign in again with the backup\'s username and password.':'Backup restored. Admin password was kept unchanged.'),content});
-  }
+  if (route === '/backup/restore' && method === 'POST') return await restoreBackup(req, res);
+  if (route === '/backup/progress' && method === 'GET') return sendJSON(req, res, 200, { active: RP.active, kind: RP.kind, phase: RP.phase, done: RP.done, total: RP.total });
+  if (route === '/backup/cancel' && method === 'POST') { RP.cancel = true; return sendJSON(req, res, 200, { ok: true }); }
+  if (route === '/keepawake/reset' && method === 'POST') { keepAwakeOk = 0; keepAwakeFail = 0; return sendJSON(req, res, 200, { ...cloud.status(), keepAwake: kaInfo() }); }
   if (route === '/cloud/status' && method === 'GET') return sendJSON(req, res, 200, { ...cloud.status(), keepAwake: kaInfo() });
   if (route === '/keepawake' && method === 'POST') {
     const b = (await readJSON(req)) || {}; if ('enabled' in b) KEEP_AWAKE_ON = !!b.enabled; if ('minutes' in b) { KEEP_AWAKE_MIN = clampMin(b.minutes); kaRestart(); }
@@ -665,6 +860,19 @@ async function adminApi(req, res, route) {
   }
   if (route === '/cloud/sync' && method === 'POST') { await cloud.syncNow(); return sendJSON(req, res, 200, { ...cloud.status(), keepAwake: kaInfo() }); }
   if (route === '/stats' && method === 'GET') return sendJSON(req, res, 200, statsSummary());
+  if (route === '/stats/report' && method === 'POST') {
+    const b = (await readJSON(req)) || {}, td = dayKey(), r = String(b.range || ''); let from = String(b.from || ''), to = String(b.to || '');
+    if (r === 'today') from = to = td; else if (r === 'yesterday') from = to = addDays(td, -1); else if (r === 'month') { from = td.slice(0, 7) + '-01'; to = td; }
+    else if (r === 'all') { from = Object.keys(stats.days).sort()[0] || td; to = td; }
+    else if (/^\d{1,3}$/.test(r) && +r >= 1) { to = td; from = addDays(td, -(+r - 1)); }
+    return sendJSON(req, res, 200, statsReport(from, to));
+  }
+  if (route === '/stats/delete' && method === 'POST') {
+    const b = (await readJSON(req)) || {};
+    if (!deleteStats(b)) return sendJSON(req, res, 400, { error: 'Choose a valid date first' });
+    cloud.schedule(500);
+    return sendJSON(req, res, 200, { ok: true, report: statsReport('', '') });
+  }
   if (route === '/backups' && method === 'GET') {
     const files = (await fsp.readdir(BACKUP_DIR)).filter(f => f.startsWith('content-')).sort().reverse();
     const list = [];
@@ -722,7 +930,7 @@ async function renderCustomerPage(req, res) {
   tpl = tpl.replace(/\{\{TITLE\}\}/g, escHtml(title)).replace(/\{\{DESC\}\}/g, escHtml(desc))
     .replace('{{SEED}}', () => `<script id="seed" type="application/json">${seed}</script>`);
   const h = { 'Content-Type': MIME['.html'], ...NO_STORE, ETag: '"p' + fileVer(path.join(ROOT, 'public', 'index.html')) + '-' + (content.v || 0) + '-' + rvVer + '-' + sv + cv + '"',
-    'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; frame-src https://www.google.com https://maps.google.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'",
+    'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; frame-src https://www.google.com https://maps.google.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=()' };
   pageCache.set(content, { rv: rvVer, sv: sv + cv, t: fileVer(path.join(ROOT, 'public', 'index.html')), html: tpl, h });
   send(req, res, 200, tpl, h);
@@ -731,7 +939,7 @@ async function renderAdminPage(req, res) {
   let tpl = await fsp.readFile(path.join(ROOT, 'admin', 'index.html'), 'utf8');
   const tp = T.resolve(content.site);
   tpl = tpl.replace(/\{\{BASE\}\}\/(admin\.js|admin\.css|typography\.js)/g, (m, f) => escHtml(ADMIN_PATH) + '/' + f + '?v=' + fileVer(path.join(ROOT, f === 'typography.js' ? 'lib' : 'admin', f)))
-    .replace(/\{\{BASE\}\}/g, escHtml(ADMIN_PATH)).replace(/\{\{SITE_URL\}\}/g, escHtml(SITE_URL))
+    .replace(/\{\{BASE\}\}/g, escHtml(ADMIN_PATH)).replace(/\{\{SITE_URL\}\}/g, escHtml(SITE_URL)).replace(/\{\{LOGO\}\}/g, escHtml((() => { const l = (content && content.site && content.site.logo) || DEFAULT_LOGO; return /^\/(uploads|assets)\/[\w.-]+$/.test(l) ? l : DEFAULT_LOGO; })()))
     .replace('{{TYPO_FONTS}}', () => `<link rel="stylesheet" href="${escHtml(T.fontsHref(tp))}">`).replace('{{TYPO_STYLE}}', () => `<style id="cx-typo">${T.css(tp)}</style>`);
   send(req, res, 200, tpl, { 'Content-Type': MIME['.html'], ...NO_STORE, 'X-Robots-Tag': 'noindex, nofollow, noarchive', 'X-Frame-Options': 'DENY',
     'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'" });
@@ -777,6 +985,7 @@ async function handle(req, res) {
   /* ---- public (read-only) ---- */
   if (req.method !== 'GET' && req.method !== 'HEAD') return notFound(req, res);
   if (p === '/' || p === '/index.html') return renderCustomerPage(req, res);
+  if (p === '/api/ver') return sendJSON(req, res, 200, { v: content.v });
   if (p === '/api/content') return sendJSON(req, res, 200, publicContent());
   if (p === '/favicon.ico') { const lg = (content.site && content.site.logo) || DEFAULT_LOGO; const to = lg === DEFAULT_LOGO ? '/assets/icon-512.png' : lg; if (/^\/(uploads|assets)\/[\w.-]+$/.test(to)) { res.writeHead(302, { Location: to, 'Cache-Control': 'public, max-age=3600' }); return res.end(); } return send(req, res, 204, '', { 'Cache-Control': 'public, max-age=3600' }); }
   if (p === '/robots.txt') return send(req, res, 200, 'User-agent: *\nAllow: /\n', { 'Content-Type': MIME['.txt'], 'Cache-Control': 'no-cache' });
@@ -852,7 +1061,7 @@ init().then(() => {
   server.requestTimeout = 60000; server.headersTimeout = 30000; server.keepAliveTimeout = 65000;
   server.on('error', e => { console.error(e.code === 'EADDRINUSE' ? `Port ${PORT} is already in use. Stop the other program or set PORT to another number.` : e); process.exit(1); });
   server.listen(PORT, HOST, () => {
-    console.log(`\nClassic Home Needs is running`);
+    console.log(`\nClassix Home Needs is running`);
     console.log(`  Customer site : http://localhost:${PORT}/`);
     console.log(`  Admin panel   : http://localhost:${PORT}${ADMIN_PATH}/   (keep this address private)`);
     console.log(`  Data folder   : ${DATA_DIR}`);

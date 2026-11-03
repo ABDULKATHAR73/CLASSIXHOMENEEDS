@@ -1,4 +1,4 @@
-/* Classic Home Needs – customer website (Tamil + English). Content comes from the server on every page load. */
+/* Classix Home Needs – customer website (Tamil + English). Content comes from the server on every page load. */
 (() => {
 'use strict';
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -50,6 +50,11 @@ Object.assign(U, {
   backWeb: ['முகப்புப் பக்கத்திற்குத் திரும்ப', 'Back to Website'], pdfLbl: ['PDF கோப்பு', 'PDF file'], productsWord: ['பொருட்கள்', 'Products']
 });
 Object.assign(U, Object.fromEntries(Object.entries({ view: ['சலுகையைப் பார்க்க', 'View offer'], items: ['பொருட்கள்', 'items'], inc: ['இந்தச் சலுகையில்', "What's inside"], price: ['சிறப்பு விலை', 'Special price'], save: ['சேமிப்பு', 'You save'], ends: ['சலுகை முடிய', 'Offer ends in'], d: ['நாள்', 'Days'], h: ['மணி', 'Hrs'], m: ['நிமி', 'Min'], s: ['வினா', 'Sec'], from: ['தொடக்கம்', 'Starts'], till: ['முடிவு', 'Ends'], terms: ['நிபந்தனைகள்', 'Terms & conditions'], more: ['சலுகை விவரங்கள்', 'Offer details'], photos: ['படங்கள்', 'Photos'], enq: ['இந்தச் சலுகை பற்றி விசாரிக்க', 'Enquire about this offer'], ended: ['இந்தச் சலுகை முடிந்துவிட்டது', 'This offer has ended'], soon: ['விரைவில் தொடங்கும்', 'Starting soon'] }).map(([k, v]) => ['of_' + k, v])));
+Object.assign(U, {
+  prodAllTitle: ['அனைத்துப் பொருட்கள்', 'All Products'], totalProducts: ['மொத்த பொருட்கள்', 'Total Products'],
+  exitTitle: ['இணையதளத்தை விட்டு வெளியேறவா?', 'Leave the website?'], exitText: ['பொருட்களையும் சலுகைகளையும் தொடர்ந்து பாருங்கள்.', 'Keep browsing our products and special offers.'],
+  exitStay: ['இங்கேயே இருக்கிறேன்', 'Stay here'], exitGo: ['வெளியேறு', 'Exit'], exitHint: ['மீண்டும் Back அழுத்தினால் வெளியேறும்', 'Press Back again to exit'], offerTap: ['தொட்டுப் பார்க்க', 'Tap to see']
+});
 const U0 = JSON.parse(JSON.stringify(U));
 function applyLabels() { for (const k in U0) U[k] = U0[k].slice(); const L = C.site.labels; if (L && typeof L === 'object') for (const k in L) if (U[k] && Array.isArray(L[k])) { if (String(L[k][0] || '').trim()) U[k][0] = String(L[k][0]).trim(); if (String(L[k][1] || '').trim()) U[k][1] = String(L[k][1]).trim(); } }
 const u = k => bi(U[k][0], U[k][1]);
@@ -96,8 +101,8 @@ function shell() {
   $('#site').innerHTML = `
   ${S('announcementTa') || S('announcement') ? `<div class="annc">${bi(S('announcementTa'), S('announcement'))}</div>` : ''}
   ${festBar()}
-  <header class="top" id="top"><div class="wrap nav">
-    <a class="brand ${!S('uiLogoText') ? 'notext' : ''}" href="#home" aria-label="Home"><span class="logo img"><img src="${esc(LOGO())}" alt="${esc(s.name)}" width="160" height="88" decoding="async" fetchpriority="high"></span><span class="brand-t">${s.est && C.site.estShow !== false ? `<small>${esc(C.shop.estLabel || 'EST.')} ${esc(s.est)}</small>` : ''}<b>${esc(s.name)}</b><span class="ta keep">${esc(s.nameTa || '')}</span></span></a>
+  <header class="top ${S('uiHdrLayout') === 'together' ? '' : 'hl-split'}" id="top"><div class="wrap nav">
+    <a class="brand ${C.site.uiNameShow === false ? 'notext' : ''}" href="#home" aria-label="Home"><span class="logo img"><img src="${esc(LOGO())}" alt="${esc(s.name)}" width="160" height="88" decoding="async" fetchpriority="high"></span><span class="brand-t">${s.est && C.site.estShow !== false ? `<small>${esc(C.shop.estLabel || 'EST.')} ${esc(s.est)}</small>` : ''}<b>${esc(s.name)}</b><span class="ta keep">${esc(s.nameTa || '')}</span></span></a>
     <nav class="links" aria-label="Main">${links}</nav>
     ${C.site.langBtn !== false ? '<button class="pill" id="langBtn" aria-label="Language"></button>' : ''}
     ${C.site.callPill !== false && s.phones[0] ? `<a class="pill call hide-sm" href="${telLink()}">${ico('phone')}<span>${esc(s.phones[0])}</span></a>` : ''}
@@ -193,7 +198,7 @@ function ofTick() {
   els.forEach(el => { const end = new Date(el.dataset.cd + 'T23:59:59').getTime() - Date.now(); if (end <= 0) return; const s = Math.floor(end / 1000), v = [Math.floor(s / 86400), Math.floor(s % 86400 / 3600), Math.floor(s % 3600 / 60), s % 60]; $$('b', el).forEach((b, k) => { b.textContent = String(v[k]).padStart(2, '0'); }); });
 }
 function openOffer(id, fromHash) {
-  const o = (C.offers || []).find(x => x.id === id); if (!o) return;
+  const o = (C.offers || []).find(x => x.id === id); if (!o) return; try { window.cxTrack && window.cxTrack('item', 'o:' + id, o.titleEn || o.titleTa); } catch {}
   const t = th(o), f = OT[t], n = offerInfo(o), live = offerLive(o), title = o.titleEn || o.titleTa || 'Offer';
   const al = v => Array.isArray(v) ? v.filter(Boolean) : lines(v), tA = al(o.termsTa), tE = al(o.termsEn), terms = Array.from({ length: Math.max(tA.length, tE.length) }, (_, k) => bi(tA[k], tE[k]));
   const msg = `Hi, I am interested in the offer: ${title}${o.titleTa && o.titleEn ? ' (' + o.titleTa + ')' : ''}${n.price != null ? ' – ' + money(n.price) : ''}`;
@@ -207,7 +212,7 @@ function openOffer(id, fromHash) {
     ${n.price != null ? `<section class="ofd-ticket"><div class="tk-l"><small>${ox('price')}</small><div class="tk-p"><b>${money(n.price)}</b>${n.was != null ? `<s>${money(n.was)}</s>` : ''}</div>${n.save ? `<em>🎉 ${ox('save')} ${money(n.save)} (${n.pct}%)</em>` : ''}</div><div class="tk-r">${n.count ? `<div><b>${n.count}</b><span>${ox('items')}</span></div>` : ''}${n.pct ? `<div class="hot"><b>${n.pct}%</b><span>OFF</span></div>` : ''}</div></section>` : ''}
     ${live && o.timer !== false && o.endDate ? `<section class="ofd-cd"><small>⏳ ${ox('ends')}</small><div data-cd="${esc(o.endDate)}"><div><b>00</b><span>${ox('d')}</span></div><div><b>00</b><span>${ox('h')}</span></div><div><b>00</b><span>${ox('m')}</span></div><div><b>00</b><span>${ox('s')}</span></div></div></section>` : ''}
     ${o.startDate || o.endDate ? `<div class="ofd-dates">${o.startDate ? `<span>📅 ${ox('from')}: <b>${dFmt(o.startDate)}</b></span>` : ''}${o.endDate ? `<span>🏁 ${ox('till')}: <b>${dFmt(o.endDate)}</b></span>` : ''}</div>` : ''}
-    ${n.items.length ? `<h2 class="ofd-h">${ox('inc')} <i>${n.count}</i></h2><div class="ofd-items">${n.items.map(x => `<div class="ofd-it"><div class="ofd-im">${ofThumb(x)}${x.qty > 1 ? `<b>×${x.qty}</b>` : ''}</div><div class="ofd-nm"><b>${bi(x.ta, x.en)}</b>${x.note ? `<small>${esc(x.note)}</small>` : ''}${x.price != null ? `<em>${money(x.price)}</em>` : ''}</div></div>`).join('')}</div>` : ''}
+    ${n.items.length ? `<h2 class="ofd-h">${ox('inc')} <i>${n.count}</i></h2><div class="ofd-items">${n.items.map(x => `<div class="ofd-it"><div class="ofd-im">${ofThumb(x)}${x.qty > 1 ? `<b>×${x.qty}</b>` : ''}</div><div class="ofd-nm"><b>${bi(x.ta, x.en)}</b>${x.note ? `<small>${esc(x.note)}</small>` : ''}${x.price != null && C.site.offerItemPrices !== false ? `<em>${money(x.price)}</em>` : ''}</div></div>`).join('')}</div>` : ''}
     ${n.photos.length ? `<h2 class="ofd-h">${ox('photos')}</h2><div class="ofd-ph">${n.photos.map((s, k) => `<button type="button" data-oph="${k}" aria-label="Photo ${k + 1}">${isPdf(s) ? '📄' : `<img src="${esc(s)}" alt="${esc(title)}" loading="lazy" decoding="async">`}</button>`).join('')}</div>` : ''}
     ${(o.detailsTa || o.detailsEn) ? `<h2 class="ofd-h">${ox('more')}</h2><div class="op-det">${bi(o.detailsTa, o.detailsEn)}</div>` : ''}
     ${terms.length ? `<h2 class="ofd-h">${ox('terms')}</h2><ul class="ofd-terms">${terms.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
@@ -232,7 +237,7 @@ const badgeHtml = p => {
 };
 function productCard(p, i = 0) {
   const c = catOf(p.category) || {}; const im = (p.images || [])[0];
-  return `<article class="card ${p.inStock === false ? 'oos' : ''}" data-r="up" style="--i:${i % 4}">
+  return `<article class="card ${p.inStock === false ? 'oos' : ''}" data-r="up" data-pcat="${esc(p.category)}" data-pname="${esc([p.name, p.nameTa, p.subtitle].join(' ').toLowerCase())}" style="--i:${i % 4}">
     <a class="ph" href="#products" data-pd="${esc(p.id)}" aria-label="${esc(p.name)}">${badgeHtml(p)}${im ? img(im, p.name) : `<span class="em">${esc(c.icon || '🛍️')}</span>`}</a>
     <div class="cbody"><span class="ccat">${esc(c.name || '')}</span><h3><a href="#products" data-pd="${esc(p.id)}">${bi(p.nameTa, p.name)}</a></h3>
       <p class="d">${esc(p.subtitle || p.description || '')}</p>
@@ -263,9 +268,20 @@ function lpBody(kind) {
     const chips = C.galleryCategories.some(c => g.some(x => x.category === c.id)) ? `<div class="chips" id="lpchips" style="margin-bottom:16px"><button class="on" data-lpc="all">${u('all')}</button>${C.galleryCategories.filter(c => g.some(x => x.category === c.id)).map(c => `<button data-lpc="${esc(c.id)}">${bi(c.ta, c.name)}</button>`).join('')}</div>` : '';
     return { t: U.galAllTitle, total: lpTotal(bi(U.totalImages[0], U.totalImages[1]), g.length), html: chips + `<div class="masonry lp-mas">${g.map((x, i) => galItem(x, i)).join('')}</div>` };
   }
+  if (kind === 'products') {
+    const cats = C.categories.filter(c => c.visible !== false && products.some(p => p.category === c.id));
+    const chips = `<div class="chips" id="lppChips" style="margin-bottom:12px"><button class="on" data-lpp="all">${u('all')}</button>${cats.map(c => `<button data-lpp="${esc(c.id)}">${esc(c.icon)} ${bi(c.ta, c.name)}</button>`).join('')}</div>`;
+    return { t: U.prodAllTitle, total: lpTotal(bi(U.totalProducts[0], U.totalProducts[1]), products.length), html: `<label class="search lp-search">${ico('search')}<input id="lppQ" type="search" placeholder="${esc(U.search[0])} / ${esc(U.search[1])}" autocomplete="off"></label>${chips}<div class="grid lp-pgrid" id="lppGrid">${products.map((p, i) => productCard(p, i)).join('')}</div><div class="empty lp-none" id="lppNone" hidden><b>🔎</b>${bi(U.notFound[0], U.notFound[1])}</div>` };
+  }
   const all = rvList();
   return { t: U.rvAllTitle, total: lpTotal(bi(U.totalReviews[0], U.totalReviews[1]), all.length), html: `<div class="testi lp-rv">${all.join('')}</div>${C.site.reviewForm !== false ? `<div class="rv-act"><button type="button" class="btn rv-write" data-rv-open><span class="t"><i>★</i> ${u('writeReview')}</span></button></div>` : ''}` };
 }
+function lppFilter() {
+  const act = $('#lppChips .on'), cat = act ? act.dataset.lpp : 'all', q = ($('#lppQ') ? $('#lppQ').value : '').trim().toLowerCase(); let n = 0;
+  $$('#lppGrid .card').forEach(c => { const ok = (cat === 'all' || c.dataset.pcat === cat) && (!q || (c.dataset.pname || '').includes(q)); c.classList.toggle('hide', !ok); if (ok) n++; });
+  const none = $('#lppNone'); if (none) none.hidden = n > 0;
+}
+document.addEventListener('input', e => { if (e.target && e.target.id === 'lppQ') lppFilter(); });
 function openList(kind, fromPop) {
   let pg = $('#lpage'); if (!pg) { pg = document.createElement('div'); pg.id = 'lpage'; pg.className = 'opage lpage'; pg.setAttribute('role', 'dialog'); pg.setAttribute('aria-modal', 'true'); document.body.appendChild(pg); }
   if (!(pg.classList.contains('open') && pg.dataset.kind === kind)) {
@@ -282,15 +298,130 @@ function closeList(fromPop) {
   pg.classList.remove('open'); if (!$('#opage.open')) document.body.classList.remove('op-open');
   if (!fromPop && history.state && history.state.lp) history.back();
 }
-addEventListener('popstate', () => {
-  const h = location.hash, om = h.match(/^#offer-(.+)$/), lm = h.match(/^#all-(offers|gallery|reviews)$/);
+/* ---------- Back button: closes the top-most thing first, never throws the visitor out of the website ---------- */
+let backSkip = 0, pushedLayers = 0, exitOpen = false;
+const layerCount = () => ($$('.modal.open').length ? 1 : 0) + ($('#lb.open') ? 1 : 0) + (document.body.classList.contains('menu-open') ? 1 : 0);
+function closeTopLayer() {
+  if ($('#lb.open')) { closeLightbox(); return true; }
+  if ($$('.modal.open').length) { closeModals(); return true; }
+  if (document.body.classList.contains('menu-open')) { document.body.classList.remove('menu-open'); return true; }
+  return false;
+}
+function syncLayers() {
+  const n = layerCount();
+  while (pushedLayers < n) { try { history.pushState({ cxl: 1 }, '', location.href); } catch { break; } pushedLayers++; }
+  if (pushedLayers > n) { const k = pushedLayers - n; pushedLayers = n; backSkip++; try { history.go(-k); } catch { backSkip--; } }
+}
+let syncQ = 0; const syncSoon = () => { if (syncQ) return; syncQ = requestAnimationFrame(() => { syncQ = 0; syncLayers(); }); };
+function showExit(show) {
+  let ov = $('#exitOv');
+  if (ov && show && !exitOpen) { ov.remove(); ov = null; }
+  if (!ov) { ov = document.createElement('div'); ov.id = 'exitOv'; ov.className = 'exit-ov'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
+    const ex = k => (S(k + 'Ta') || S(k + 'En')) ? bi(S(k + 'Ta') || U[k][0], S(k + 'En') || U[k][1]) : u(k);
+    const lg = C.site.exitLogoOn === false ? '' : `<div class="exit-logo"><img src="${esc(C.site.exitLogo || LOGO())}" alt="" ${C.site.exitLogoSize ? `style="height:${Math.min(160, Math.max(30, Number(C.site.exitLogoSize) || 68))}px"` : ''}></div>`;
+    const nm = C.site.exitNameOn === false ? '' : `<div class=\"exit-name\"><b>${esc(C.shop.name)}</b>${C.shop.nameTa ? `<span>${esc(C.shop.nameTa)}</span>` : ''}</div>`;
+    ov.innerHTML = `<div class="exit-bg" data-exit-stay></div><div class="exit-box">${lg}${nm}<h3>${ex('exitTitle')}</h3><p>${ex('exitText')}</p><div class="exit-btns"><button type="button" class="btn gold" data-exit-stay><span class="t">${ex('exitStay')}</span></button><button type="button" class="btn line" data-exit-go><span class="t">${ex('exitGo')}</span></button></div><small class="exit-hint">${ex('exitHint')}</small></div>`;
+    document.body.appendChild(ov); void ov.offsetWidth; }
+  exitOpen = !!show; ov.classList.toggle('open', !!show);
+}
+function leaveSite() { exitOpen = false; backSkip = 0; try { history.go(-2); } catch { /* ignore */ } setTimeout(() => { try { window.close(); } catch { /* ignore */ } toast('You can close this tab now'); showExit(false); }, 700); }
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-exit-stay]')) { e.preventDefault(); showExit(false); }
+  else if (e.target.closest('[data-exit-go]')) { e.preventDefault(); leaveSite(); }
+});
+function initBackGuard() {
+  try {
+    const hs = history.state;
+    if (!(hs && (hs.cxh || hs.cxg || 'op' in hs || 'lp' in hs))) { const base = location.pathname + location.search, h0 = location.hash; history.replaceState({ cxg: 1 }, '', base); history.pushState({ cxh: 1 }, '', base + h0); }
+  } catch { /* ignore */ }
+  new MutationObserver(syncSoon).observe(document.body, { attributes: true, attributeFilter: ['class'], subtree: true });
+}
+addEventListener('popstate', e => {
+  if (backSkip > 0) { backSkip--; return; }
+  const st = e.state || {};
+  if (st.cxg) {   /* reached the entry below the website: ask before leaving */
+    if (exitOpen) { exitOpen = false; try { history.back(); } catch { /* ignore */ } return; }
+    try { history.pushState({ cxh: 1 }, '', location.pathname + location.search); } catch { /* ignore */ }
+    closeTopLayer(); closeOffer(true); closeList(true); pushedLayers = 0; showExit(true); return;
+  }
+  if (exitOpen) showExit(false);
+  if (pushedLayers > 0) { pushedLayers--; closeTopLayer(); return; }   /* a popup / photo viewer / menu was open: close only that */
+  const h = location.hash, om = h.match(/^#offer-(.+)$/), lm = h.match(/^#all-(offers|gallery|reviews|products)$/);
   if (om) openOffer(decodeURIComponent(om[1]), true); else closeOffer(true);
   if (lm) openList(lm[1], true); else if (!om) closeList(true);
 });
+addEventListener('keydown', e => { if (e.key === 'Escape') document.body.classList.remove('menu-open'); });
 addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('op-open') && !$('.modal.open') && !$('#lb.open')) closeOffer(); });
+/* ===== v4.13 offers swipe banner: colourful, animated, every text editable + on/off ===== */
+const fsOn = (o, k) => o[k] !== false && o[k] !== 'false';
+function cdText(end) {
+  const ms = new Date(end + 'T23:59:59') - Date.now(); if (!(ms > 0)) return null;
+  const s = Math.floor(ms / 1000), d = Math.floor(s / 86400), p = n => String(n).padStart(2, '0');
+  return (d ? d + 'd ' : '') + p(Math.floor(s % 86400 / 3600)) + ':' + p(Math.floor(s % 3600 / 60)) + ':' + p(s % 60);
+}
+function fsParticles(fx, emoji) {
+  if (fx === 'none') return '';
+  const pool = fx === 'sparkle' ? ['✦', '✧', '✨', '✦'] : fx === 'party' ? [emoji, '✨', '🎉', emoji, '⭐'] : [emoji];
+  const am = Number(C.site.festFxAmount), N0 = C.site.festFxAmount === undefined || C.site.festFxAmount === '' || !isFinite(am) ? 7 : Math.max(0, Math.min(12, Math.round(am))), N = innerWidth < 640 ? Math.min(N0, 5) : N0;
+  if (!N) return '';
+  let h = '';
+  for (let k = 0; k < N; k++) h += `<i style="--x:${(k * 37 + 9) % 94}%;--y:${(k * 29 + 6) % 78}%;--s:${14 + (k * 5) % 13}px;--d:${(5.2 + (k * 7) % 5).toFixed(1)}s;--dl:-${(k * 1.35).toFixed(2)}s">${esc(pool[k % pool.length])}</i>`;
+  return `<span class="fs-fx" aria-hidden="true">${h}</span>`;
+}
+function festSlide(o, i) {
+  const t = th(o), f = OT[t], n = offerInfo(o), dl = daysLeft(o);
+  const emoji = (o.bnEmoji || '').trim() || f[0];
+  const tt = o.bnTitleTa || o.bnTitleEn ? [o.bnTitleTa, o.bnTitleEn] : [o.titleTa, o.titleEn];
+  const tg = o.bnTagTa || o.bnTagEn ? [o.bnTagTa, o.bnTagEn] : [o.tagTa, o.tagEn];
+  const title = fsOn(o, 'bnTitleOn') && (tt[0] || tt[1]) ? `<b class="fs-t">${bi(tt[0], tt[1])}</b>` : '';
+  const tag = fsOn(o, 'bnTagOn') && (tg[0] || tg[1]) ? `<small class="fs-tag">${bi(tg[0], tg[1])}</small>` : '';
+  const badge = fsOn(o, 'bnBadgeOn') && o.badge ? `<span class="fs-bd">${esc(o.badge)}</span>` : '';
+  const cd = fsOn(o, 'bnTimerOn') && o.timer !== false && o.endDate && cdText(o.endDate) ? `<span class="fs-cd" data-end="${esc(o.endDate)}">⏳ <span class="v">${cdText(o.endDate)}</span></span>` : (fsOn(o, 'bnTimerOn') && o.timer !== false && dl != null ? `<span class="fs-cd">⏳ ${leftText(dl)}</span>` : '');
+  const meta = (fsOn(o, 'bnPriceOn') && n.price != null ? `<em class="pr">${money(n.price)}${n.was != null ? ` <s>${money(n.was)}</s>` : ''}</em>` : '') + (fsOn(o, 'bnPctOn') && n.pct ? `<em class="pc">${n.pct}% OFF</em>` : '');
+  const photo = fsOn(o, 'bnImgOn') && n.photos[0] && !isPdf(n.photos[0]) ? n.photos[0] : '';
+  const pic = photo ? `<span class="fs-pic has-img"><img src="${esc(photo)}" alt="" width="84" height="84" decoding="async"></span>` : (fsOn(o, 'bnEmojiOn') ? `<span class="fs-pic" aria-hidden="true">${esc(emoji)}</span>` : '');
+  let btn = '';
+  if (C.site.festBtnOn !== false && C.site.festBtnOn !== 'false' && fsOn(o, 'bnBtnOn')) {
+    const ta = o.bnBtnTa || C.site.festBtnTa, en = o.bnBtnEn || C.site.festBtnEn;
+    const label = ta || en ? bi(ta, en) : ox('view');
+    const icon = o.bnBtnIcon === undefined || o.bnBtnIcon === '' ? '›' : o.bnBtnIcon;
+    const cls = 'fs-go fsb-' + (['white', 'gold', 'green', 'red', 'dark'].includes(o.bnBtnStyle) ? o.bnBtnStyle : 'white');
+    const inner = `<span class="fs-bt">${label}</span>${icon === 'none' ? '' : ` <i>${esc(icon)}</i>`}`;
+    btn = o.bnBtnGo === 'wa' ? `<a class="${cls}" href="${esc(waLink('Hi, I am interested in the offer: ' + (o.titleEn || o.titleTa || '')))}" target="_blank" rel="noopener">${inner}</a>` : `<span class="${cls}">${inner}</span>`;
+  }
+  const fx = ['confetti', 'party', 'sparkle', 'none'].includes(o.bnFx) ? o.bnFx : 'confetti';
+  const custom = o.bnCustom && /^#[0-9a-f]{6}$/i.test(o.bnC1 || '') && /^#[0-9a-f]{6}$/i.test(o.bnC2 || '');
+  const top = badge + cd;
+  return `<div class="fest-s fs-${t} fx-${fx}${custom ? ' fs-custom' : ''}${pic ? '' : ' fs-nopic'}${btn ? '' : ' fs-nobtn'}${i === 0 ? ' act' : ''}" role="button" tabindex="0" data-offer="${esc(o.id)}" data-fi="${i}"${custom ? ` style="--c1:${o.bnC1};--c2:${o.bnC2}"` : ''}>
+    ${fsParticles(fx, emoji)}${pic}
+    <span class="fs-txt">${top ? `<span class="fs-top">${top}</span>` : ''}${title}${tag}${meta ? `<span class="fs-meta">${meta}</span>` : ''}</span>
+    ${btn}</div>`;
+}
 function festBar() {
-  const o = liveOffers().find(x => x.theme && x.theme !== 'special' && OT[x.theme] && !['wholesale', 'new', 'gift'].includes(x.theme)); if (!o) return ''; const f = OT[o.theme], dl = daysLeft(o);
-  return `<a class="fest-bar" href="#offers"><span class="em">${f[0]}</span><span>${bi(o.titleTa, o.titleEn)}</span>${dl != null ? `<u>${leftText(dl)}</u>` : ''}<span class="em">${f[0]}</span></a>`;
+  if (C.site.festBarOn === false || C.site.festBarOn === 'false') return '';
+  const list = liveOffers().filter(o => o.topBar !== false); if (!list.length) return '';
+  const many = list.length > 1;
+  return `<section class="fest" id="fest" aria-label="Offers"><div class="fest-track" id="festTrack">${list.map(festSlide).join('')}</div>${many ? `<button type="button" class="fest-nav p" aria-label="Previous offer">‹</button><button type="button" class="fest-nav n" aria-label="Next offer">›</button><div class="fest-dots">${list.map((_, k) => `<button type="button" data-fi="${k}" class="${k ? '' : 'on'}" aria-label="Offer ${k + 1}"></button>`).join('')}</div>` : ''}</section>`;
+}
+let festTimer = 0, festTick = 0, festIO = null;
+function initFest() {
+  clearInterval(festTimer); festTimer = 0; clearInterval(festTick); festTick = 0;
+  const tr = $('#festTrack'); if (!tr) return;
+  if ($('.fs-cd[data-end]', tr)) festTick = setInterval(() => { if (document.hidden || ($('#fest') && $('#fest').classList.contains('off'))) return; $$('.fs-cd[data-end]', tr).forEach(el => { const v = $('.v', el), x = cdText(el.dataset.end); if (v && x) v.textContent = x; }); }, 1000);
+  try { if (festIO) festIO.disconnect(); const fe = $('#fest'); if (fe && 'IntersectionObserver' in window) { festIO = new IntersectionObserver(es => es.forEach(e => fe.classList.toggle('off', !e.isIntersecting)), { threshold: 0.01 }); festIO.observe(fe); } } catch { /* ignore */ }
+  const sl = $$('.fest-s', tr); if (sl.length < 2) return;
+  const dots = $$('.fest-dots button'); let cur = 0, hold = 0;
+  const mark = () => { dots.forEach((d, k) => d.classList.toggle('on', k === cur)); sl.forEach((s, k) => s.classList.toggle('act', k === cur)); };
+  const go = i => { cur = (i + sl.length) % sl.length; tr.scrollTo({ left: cur * tr.clientWidth, behavior: 'smooth' }); mark(); };
+  const pause = () => { hold = Date.now() + 8000; };
+  tr.addEventListener('scroll', () => { const i = Math.round(tr.scrollLeft / Math.max(1, tr.clientWidth)); if (i !== cur && i >= 0 && i < sl.length) { cur = i; mark(); } }, { passive: true });
+  ['touchstart', 'pointerdown', 'wheel', 'focusin'].forEach(ev => tr.addEventListener(ev, pause, { passive: true }));
+  const pv = $('.fest-nav.p'), nx = $('.fest-nav.n');
+  if (pv) pv.onclick = e => { e.stopPropagation(); pause(); go(cur - 1); }; if (nx) nx.onclick = e => { e.stopPropagation(); pause(); go(cur + 1); };
+  dots.forEach(d => d.onclick = e => { e.stopPropagation(); pause(); go(+d.dataset.fi); });
+  tr.addEventListener('keydown', e => { if (e.key === 'ArrowRight') { pause(); go(cur + 1); } else if (e.key === 'ArrowLeft') { pause(); go(cur - 1); } });
+  const g = Number(C.site.festAuto), sec = C.site.festAuto === undefined || C.site.festAuto === '' || C.site.festAuto === null || !isFinite(g) ? 5 : g;
+  if (sec > 0) festTimer = setInterval(() => { if (Date.now() < hold || document.hidden || document.body.classList.contains('op-open') || document.body.classList.contains('menu-open')) return; go(cur + 1); }, Math.max(2, sec) * 1000);
 }
 const whyCards = () => `<div class="why">${C.why.map((w, i) => `<div class="wy" data-r="up" style="--i:${i % 3}"><div class="ic">${esc(w.icon)}</div><h3>${bi(w.titleTa, w.titleEn)}</h3><p>${bi(w.textTa, w.textEn)}</p></div>`).join('')}</div>`;
 const statsHtml = (flat) => C.stats.length ? `<div class="wrap"><div class="stats ${flat ? 'flat' : ''}">${C.stats.map((s, i) => `<div class="stat" data-r="up" style="--i:${i}"><b data-count="${esc(s.value)}">${esc(s.value)}</b>${bi(s.ta, s.en)}</div>`).join('')}</div></div>` : '';
@@ -334,7 +465,7 @@ function openEnq(pid, type) {
 }
 function closeModals() { $$('.modal').forEach(m => m.classList.remove('open')); }
 function openProduct(id) {
-  const p = products.find(x => x.id === id); if (!p) return; const c = catOf(p.category) || {}; const imgs = p.images || [];
+  const p = products.find(x => x.id === id); if (!p) return; try { window.cxTrack && window.cxTrack('item', 'p:' + id, p.name); } catch {} const c = catOf(p.category) || {}; const imgs = p.images || [];
   const msg = `Hi, I would like details about: ${p.name}${p.nameTa ? ' (' + p.nameTa + ')' : ''}`;
   $('#pBody').innerHTML = `<div class="pd" style="padding:22px"><div><div class="pd-main" id="pdMain">${badgeHtml(p)}${imgs.length ? `<img src="${esc(imgs[0])}" alt="${esc(p.name)}" id="pdImg">` : `<div class="ph" style="height:100%"><span class="em" style="font-size:110px">${esc(c.icon || '🛍️')}</span></div>`}</div>
     ${imgs.length > 1 ? `<div class="thumbs">${imgs.map((s, i) => `<button class="${i ? '' : 'on'}" data-th="${i}" aria-label="Photo ${i + 1}"><img src="${esc(s)}" alt=""></button>`).join('')}</div>` : ''}</div>
@@ -357,7 +488,7 @@ function page() {
       ${sl.map((s, i) => `<div class="slide ${i ? '' : 'on'}">${s.image ? `<img src="${esc(s.image)}" alt="" ${i ? 'loading="lazy"' : ''}>` : ''}</div>`).join('')}
       <span class="blob a"></span><span class="blob b"></span><div class="sparks">${Array.from({ length: 10 }, (_, i) => `<i style="--x:${(i * 37 + 11) % 96}%;--d:${(i % 5) * 1.4}s;--s:${6 + (i % 4) * 3}px"></i>`).join('')}</div>
       <div class="hero-in">
-        <span class="chip"><i></i><span class="cl">${bi(S('heroTagTa'), S('heroTag'))}</span></span>
+        <span class="chip"><i></i><span class="cl">${bi(S('heroTagTa'), S('heroTagEn') || S('heroTag'))}</span></span>
         <h1>${bi(S('heroTitleTa'), S('heroTitleEn'))}</h1>
         <div class="sub">${bi(S('heroSubTa'), S('heroSubEn'))}</div>
         <div class="promo">${bi(S('promoTa'), S('promoEn'))}</div>
@@ -411,16 +542,16 @@ let heroTimer, io, spy;
 function drawProducts() {
   const grid = $('#plistGrid'); if (!grid) return; const k = state.q.trim().toLowerCase();
   const list = products.filter(p => (state.cat === 'all' || p.category === state.cat) && (!k || [p.name, p.nameTa, p.subtitle, p.description, p.descriptionTa].join(' ').toLowerCase().includes(k)));
-  const lim = state.cat === 'all' && !k && !state.all ? 8 : 1000;
+  const nr = C.site.productsHomeCount, N = nr === undefined || nr === null || nr === '' || !isFinite(Number(nr)) ? 8 : Math.floor(Number(nr)); const lim = state.cat === 'all' && !k && N > 0 ? N : 1000;
   grid.innerHTML = list.length ? list.slice(0, lim).map(productCard).join('') : `<div class="empty" style="grid-column:1/-1"><b>🔎</b>${bi(U.notFound[0], U.notFound[1])}</div>`;
-  $('#plMore').innerHTML = list.length > lim ? `<button class="btn dark" id="plAll"><span class="t">${u('viewProducts')}</span></button>` : '';
-  const pa = $('#plAll'); if (pa) pa.onclick = () => { state.all = true; drawProducts(); };
+  $('#plMore').innerHTML = list.length > lim ? `<button type="button" class="btn gold big" id="plAll"><span class="t">${u('viewProducts')} <i>›</i></span></button>` : '';
+  const pa = $('#plAll'); if (pa) pa.onclick = () => openList('products');
   observe(grid); tilt(grid);
 }
 function setCat(c) { state.cat = c; $$('#chips button').forEach(x => x.classList.toggle('on', x.dataset.c === c)); drawProducts(); }
 function tilt(root) { $$('.card', root).forEach(c => { if (!matchMedia('(pointer:fine)').matches) return; c.onmousemove = e => { const r = c.getBoundingClientRect(); c.style.setProperty('--ry', ((e.clientX - r.left) / r.width - .5) * 6 + 'deg'); c.style.setProperty('--rx', (-((e.clientY - r.top) / r.height - .5)) * 6 + 'deg'); }; c.onmouseleave = () => { c.style.setProperty('--rx', '0deg'); c.style.setProperty('--ry', '0deg'); }; }); }
 function afterRender() {
-  bindForms($('#view'));
+  bindForms($('#view')); initFest();
   const hb = $('.hero-box');
   if (hb) {
     const slides = $$('.slide', hb), dots = $$('[data-slide]', hb), cap = $('#cap'); let cur = 0;
@@ -439,8 +570,22 @@ function afterRender() {
   $$('#view [id]').forEach(el => { if (NAV.some(n => n[1] === '#' + el.id)) spy.observe(el); });
 }
 let animMode = 'full';
+(function () {
+  let bar = null, tick = 0;
+  const upd = () => { tick = 0; if (!bar) return; const h = document.documentElement, m = h.scrollHeight - innerHeight; bar.style.transform = 'scaleX(' + (m > 0 ? Math.min(1, scrollY / m) : 0) + ')'; };
+  addEventListener('scroll', () => { if (!tick) tick = requestAnimationFrame(upd); }, { passive: true });
+  const mk = () => { bar = document.createElement('div'); bar.id = 'sprog'; bar.setAttribute('aria-hidden', 'true'); document.body.appendChild(bar); upd(); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mk); else mk();
+})();
+/* every part of the page gets a scroll effect: footer, contact, lists... (items beside each other appear one after another) */
+const AUTO_R = [['.foot .fb', 'up'], ['.foot .fl', 'up'], ['.fgrid > *', 'up'], ['.contact .ci', 'left'], ['.contact .formcard', 'right'], ['.contact .map, .contact iframe', 'zoom'], ['.rwc li', 'left'], ['.strips > *', 'pop'], ['.stat', 'pop'], ['.wag-in', 'zoom'], ['.about .tagline', 'up'], ['.about .cbtns', 'up'], ['.rv-act', 'up'], ['.lp-total', 'flip'], ['.lp-oc', 'up'], ['.lp-search', 'up'], ['.chips', 'up']];
+function autoReveal(root) {
+  AUTO_R.forEach(([sel, kind]) => { try { $$(sel, root).forEach(el => { if (!el.hasAttribute('data-r')) el.setAttribute('data-r', kind); }); } catch { /* ignore */ } });
+  const seen = new Map();
+  $$('[data-r]', root).forEach(el => { if (el.style.getPropertyValue('--i')) return; const p = el.parentElement, n = seen.get(p) || 0; seen.set(p, n + 1); el.style.setProperty('--i', Math.min(n, 7)); });
+}
 function observe(root) {
-  animMode = document.documentElement.dataset.anim || 'full';
+  animMode = document.documentElement.dataset.anim || 'full'; autoReveal(root);
   if (!io) io = new IntersectionObserver(es => es.forEach(e => {
     const el = e.target, reveal = el.hasAttribute('data-r');
     if (e.isIntersecting) { el.classList.add('in'); if (el.dataset.count) countUp(el); if (animMode !== 'full') io.unobserve(el); }
@@ -500,6 +645,45 @@ function prep() {
 }
 /* size / layout settings chosen by the shop owner (stored in site.ui* keys) */
 const UI = { uiZoom: 100, uiHeroHeightM: 420, uiHeroHeightD: 600, uiHeroTitleM: 26, uiHeroTitleD: 54, uiLogo: 56, uiColsM: 2, uiColsD: 4, uiRatio: '1/1', uiCatIcon: 72, uiCatColsM: 2, uiGalColsM: 2, uiGalColsD: 4, uiSecPad: 56, uiRadius: 20, uiFontTa: 100, uiFontEn: 100, uiLineSpace: 145, uiLetterSpace: 0, uiAnim: 'full', uiGlow: true };
+/* Offers banner settings -> CSS variables (sizes) and switches (effects). Everything is a transform / opacity animation, so it stays smooth. */
+function applyFest() {
+  const r = document.documentElement, st = r.style, S2 = C.site;
+  const num = (k, a, b) => { const v = S2[k]; if (v === '' || v == null || v === false) return null; const x = Number(v); return isFinite(x) && x > 0 ? Math.min(b, Math.max(a, x)) : null; };
+  const put = (name, v, u = 'px') => { if (v == null) st.removeProperty(name); else st.setProperty(name, v + u); };
+  const sc = Number(S2.festScale); put('--fs-scale', isFinite(sc) && sc > 0 ? Math.min(2, Math.max(.5, sc / 100)) : null, '');
+  put('--fs-h', num('festH', 40, 400)); put('--fs-title', num('festFont', 11, 48)); put('--fs-tag', num('festTagFont', 9, 26)); put('--fs-price', num('festPriceFont', 11, 44));
+  put('--fs-btn', num('festBtnFont', 10, 28)); put('--fs-btnpad', num('festBtnPad', 4, 30)); put('--fs-pic', num('festPicSize', 36, 150));
+  const sp = Number(S2.festSpeed); put('--fs-speed', isFinite(sp) && sp > 0 ? Math.min(2.5, Math.max(.4, sp / 100)) : null, '');
+  const on = k => S2[k] !== false && S2[k] !== 'false';
+  const sw = (name, ok, v) => st.setProperty(name, ok ? v : 'none');
+  sw('--fs-shine', on('festShine'), 'fsSheen'); sw('--fs-beat', on('festPulse'), 'fsBeat'); sw('--fs-float', on('festFloat'), 'fsFloat');
+  const ent = on('festEntrance'); sw('--fs-in', ent, 'fsIn'); sw('--fs-pop', ent, 'fsPop'); sw('--fs-popic', ent, 'fsPopPic');
+  let q = ['auto', 'full', 'lite', 'off'].includes(String(S2.festQuality)) ? S2.festQuality : 'auto';
+  if (q === 'auto') q = (navigator.deviceMemory && navigator.deviceMemory <= 2) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2) ? 'lite' : 'full';
+  r.dataset.fsQ = q;
+}
+/* ?pv=1 : the small live preview shown inside the admin panel (no visitor counting, only the banner is visible) */
+const PV = /[?&]pv=1(&|$)/.test(location.search);
+/* ?pick=1 : "Find setting" mode, opened inside the admin panel. Tapping anything sends what was tapped to the admin, which opens that exact setting. No visitor counting. */
+const PK = /[?&]pick=1(&|$)/.test(location.search) && window.parent !== window;   /* only inside the admin panel */
+if (PV) {
+  document.documentElement.classList.add('pv');
+  let q = 0, pend = {};
+  const size = () => { try { const f = $('#fest'); parent.postMessage({ cxfestH: f ? f.offsetHeight : 0 }, location.origin); } catch { /* ignore */ } };
+  addEventListener('message', e => {
+    if (e.origin !== location.origin || !e.data || typeof e.data.cxfest !== 'object' || !e.data.cxfest) return;
+    Object.assign(pend, e.data.cxfest);
+    if (q) return;
+    q = requestAnimationFrame(() => {
+      q = 0; const o = pend; pend = {}; if (!C) return;
+      const struct = ['festBarOn', 'festBtnOn', 'festBtnTa', 'festBtnEn', 'festFxAmount'].some(k => k in o && C.site[k] !== o[k]);
+      Object.assign(C.site, o); applyFest();
+      if (struct) { const f = $('#fest'); if (f) f.outerHTML = festBar(); else $('#site').insertAdjacentHTML('afterbegin', festBar()); initFest(); }
+      size();
+    });
+  });
+  setInterval(size, 500);
+}
 function applyUI() {
   const g = k => { const v = C.site[k]; return v === undefined || v === null || v === '' ? UI[k] : v; };
   const n = (k, lo, hi) => Math.min(hi, Math.max(lo, Number(g(k)) || UI[k]));
@@ -520,7 +704,31 @@ function applyUI() {
   const tc = document.querySelector('meta[name=theme-color]'); if (tc) tc.content = /^#[0-9a-f]{6}$/i.test(String(C.site.uiColorBrown || '')) ? C.site.uiColorBrown : '#4a2f20';
   document.documentElement.dataset.fit = C.site.imgFit === 'cover' ? 'cover' : 'contain';
   ['hero', 'products', 'gallery', 'offers', 'about'].forEach(a => { const v = C.site['imgFit' + a[0].toUpperCase() + a.slice(1)]; document.documentElement.dataset['fit' + a[0].toUpperCase() + a.slice(1)] = v === 'cover' ? 'cover' : 'contain'; });
+  { const num = (k, lo, hi) => { const v = C.site[k]; if (v === '' || v === undefined || v === null) return null; const x = Number(v); return isFinite(x) && x > 0 ? Math.min(hi, Math.max(lo, x)) : null; };
+    const R = []; const css = (sel, o) => { const parts = Object.entries(o).filter(([, v]) => v !== null && v !== undefined && v !== false).map(([k, v]) => k + ':' + v + '!important'); if (parts.length) R.push(sel + '{' + parts.join(';') + '}'); };
+    const px = v => v === null ? null : v + 'px';
+    const bf = num('uiBrandFont', 10, 44), bt = num('uiBrandTaFont', 8, 30), lh = num('uiLangH', 26, 70), lf = num('uiLangFont', 9, 26), mb = num('uiMenuBtn', 30, 80), qf = num('uiQnavFont', 9, 24), qh = num('uiQnavH', 24, 70), af = num('uiAnnFont', 9, 26);
+    const wrap = C.site.uiBrandWrap === true || C.site.uiBrandWrap === 'true';
+    css('header.top .brand b, header.top .brand-t b', { 'font-size': px(bf), 'white-space': wrap ? 'normal' : null, 'overflow': wrap ? 'visible' : null, 'text-overflow': wrap ? 'clip' : null });
+    css('header.top .brand span.ta, header.top .brand-t .ta', { 'font-size': px(bt), 'white-space': wrap ? 'normal' : null, 'overflow': wrap ? 'visible' : null, 'text-overflow': wrap ? 'clip' : null });
+    css('header.top #langBtn.pill, header.top .pill', { 'height': px(lh), 'min-height': px(lh), 'font-size': px(lf) });
+    css('header.top #langBtn b', { 'font-size': px(lf) });
+    css('header.top .burger', { 'width': px(mb), 'height': px(mb) });
+    css('header.top .qnav a', { 'min-height': px(qh) });
+    css('header.top .qnav a .ta', { 'font-size': px(qf) });
+    css('header.top .qnav a .en', { 'font-size': qf ? Math.max(8, Math.round(qf * .78)) + 'px' : null });
+    css('.annc, .annc .ta, .annc .en', { 'font-size': px(af) });
+    css('.btn:not(.sm)', { 'min-height': px(num('uiBtnH', 30, 90)), 'font-size': px(num('uiBtnFont', 10, 30)), 'padding-left': px(num('uiBtnPadX', 6, 60)), 'padding-right': px(num('uiBtnPadX', 6, 60)), 'border-radius': px(num('uiBtnRadius', 0, 60)) });
+    css('.cacts .btn, .btn.sm', { 'font-size': px(num('uiCardBtnFont', 9, 24)), 'min-height': px(num('uiCardBtnH', 26, 70)) });
+    css('.card h3, .card h3 .ta, .card h3 .en', { 'font-size': px(num('uiCardTitleFont', 10, 34)) });
+    css('.card .d', { 'font-size': px(num('uiCardTextFont', 9, 26)) });
+    css('.price, .price b', { 'font-size': px(num('uiPriceFont', 11, 44)) });
+    css('.sec-head h2 .ta, .sec-head h2 .en', { 'font-size': px(num('uiSecTitleFont', 14, 70)) });
+    css('.foot, .foot p, .foot a, .foot li', { 'font-size': px(num('uiFooterFont', 10, 26)) });
+    let el = document.getElementById('cx-ui'); if (!el) { el = document.createElement('style'); el.id = 'cx-ui'; document.head.appendChild(el); } el.textContent = R.join('\n'); }
   document.documentElement.dataset.anim = ['full', 'light', 'off'].includes(String(g('uiAnim'))) ? g('uiAnim') : 'full';
+  document.documentElement.dataset.fx = ['rise', 'zoom', 'slide', 'bounce'].includes(String(g('uiScrollFx'))) ? g('uiScrollFx') : 'rise';
+  applyFest();
   document.documentElement.dataset.glow = g('uiGlow') === false || g('uiGlow') === 'false' ? 'off' : 'on';
 }
 function renderAll(keep) {
@@ -534,6 +742,7 @@ let fhT = 0;
 function fitHeader() {
   const h = document.getElementById('top'); if (!h) return;
   h.classList.remove('compact');
+  if (h.classList.contains('hl-split') && innerWidth >= 700) { h.classList.add('compact'); return; }   /* logo left, name centre: always the compact header on bigger screens */
   if (innerWidth < 980) return;
   const nav = h.querySelector('.nav'), kids = [...nav.children].filter(e => e.offsetParent !== null && e.getBoundingClientRect().width > 0);
   let bad = nav.scrollWidth > nav.clientWidth + 1;
@@ -546,17 +755,18 @@ addEventListener('resize', fitSoon); addEventListener('load', fitSoon); addEvent
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitSoon);
 new MutationObserver(fitSoon).observe(document.body, { attributes: true, attributeFilter: ['data-lang', 'class'] });
 new MutationObserver(fitSoon).observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'data-lang'] });
-document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.of-card[data-offer]')) { e.preventDefault(); openOffer(e.target.dataset.offer); } });
+document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.of-card[data-offer],.fest-s[data-offer]')) { e.preventDefault(); openOffer(e.target.dataset.offer); } });
 document.addEventListener('click', e => {
   if (e.target.closest('[data-opclose]')) { e.preventDefault(); closeOffer(); return; }
   if (e.target.closest('[data-lpclose]')) { e.preventDefault(); closeList(); return; }
   const lpb = e.target.closest('[data-lp]'); if (lpb) { e.preventDefault(); openList(lpb.dataset.lp); return; }
+  const lpp = e.target.closest('[data-lpp]'); if (lpp) { $$('[data-lpp]').forEach(x => x.classList.toggle('on', x === lpp)); lppFilter(); return; }
   const lpc = e.target.closest('[data-lpc]'); if (lpc) { $$('[data-lpc]').forEach(x => x.classList.toggle('on', x === lpc)); $$('#lpage .gi').forEach(x => x.classList.toggle('hide', lpc.dataset.lpc !== 'all' && x.dataset.gcat !== lpc.dataset.lpc)); return; }
   const of = e.target.closest('[data-offer]'); if (of) { if (e.target.closest('a[href]') && !e.target.closest('button[data-offer]')) return; e.preventDefault(); openOffer(of.dataset.offer); return; }
   const pd = e.target.closest('[data-pd]'); if (pd) { e.preventDefault(); openProduct(pd.dataset.pd); return; }
   const enq = e.target.closest('[data-enq]'); if (enq) { e.preventDefault(); openEnq(enq.dataset.enq); return; }
   const cat = e.target.closest('[data-cat]'); if (cat) { e.preventDefault(); setCat(cat.dataset.cat); window.cxGo($('#products'), true); return; }
-  const gi = e.target.closest('.gi'); if (gi) { if (isPdf(gi.getAttribute('href'))) return; e.preventDefault(); const g = gal(); openLightbox(g, +gi.dataset.gi); return; }
+  const gi = e.target.closest('.gi'); if (gi) { if (isPdf(gi.getAttribute('href'))) return; e.preventDefault(); const g = gal(); try { const it = g[+gi.dataset.gi]; if (it && window.cxTrack) window.cxTrack('item', 'g:' + String(it.url).split('/').pop().replace(/\.[^.]*$/, ''), it.title || it.description || 'Photo'); } catch {} openLightbox(g, +gi.dataset.gi); return; }
   const ty = e.target.closest('[data-type]'); if (ty) { const r = $$('#contact input[name=type]'); r.forEach(x => x.checked = x.value === ty.dataset.type); }
   const b = e.target.closest('.btn'); if (b) { const r = b.getBoundingClientRect(), s = document.createElement('span'); s.className = 'rp'; const d = Math.max(r.width, r.height); s.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d / 2}px;top:${e.clientY - r.top - d / 2}px`; b.appendChild(s); setTimeout(() => s.remove(), 600); }
 });
@@ -649,18 +859,73 @@ async function boot() {
   try { C = await loadContent(); }
   catch { sp.innerHTML = '<div style="text-align:center;padding:0 24px"><p style="margin:0 0 16px;font-size:16px">Could not load the website. Please check your connection and try again.</p><button onclick="location.reload()" style="background:#c8902e;color:#fff;border:0;border-radius:99px;padding:12px 28px;font:700 16px inherit;cursor:pointer">Try again</button></div>'; return; }
   try { renderAll(false); } catch (e) { console.error(e); }
+  if (!PV && !PK) initBackGuard();
+  if (PK) { try { initPick(); } catch (e) { console.error(e); } }
   setTimeout(hideSplash, Math.max(0, 350 - (Date.now() - t0)));
   const oh = location.hash.match(/^#offer-(.+)$/);
   if (oh) { try { history.replaceState({ op: null }, '', location.pathname); history.pushState({ op: 1 }, '', location.hash || '#offer-' + oh[1]); } catch {} openOffer(decodeURIComponent(oh[1]), true); }
   else { let el = null; try { el = location.hash && $(location.hash); } catch {} if (el) setTimeout(() => window.cxGo(el, false), 700); }
-  const lh = location.hash.match(/^#all-(offers|gallery|reviews)$/); if (lh) { try { history.replaceState({ lp: null }, '', location.pathname); history.pushState({ lp: lh[1] }, '', '#all-' + lh[1]); } catch {} openList(lh[1], true); }
-  visitCount();
+  const lh = location.hash.match(/^#all-(offers|gallery|reviews|products)$/); if (lh) { try { history.replaceState({ lp: null }, '', location.pathname); history.pushState({ lp: lh[1] }, '', '#all-' + lh[1]); } catch {} openList(lh[1], true); }
+  if (!PV && !PK) { visitCount(); liveSync(); } else if (PV) { try { sp.style.display = 'none'; } catch {} }
+}
+/* The website follows the admin panel: when the admin saves, every open page updates itself within seconds (no manual refresh). */
+function liveSync() {
+  let busy = false;
+  const check = async () => {
+    if (busy || document.hidden) return; busy = true;
+    try {
+      const r = await fetch('/api/ver', { cache: 'no-store' });
+      if (r.ok) { const j = await r.json(); if (j && j.v && C && j.v !== C.v) {
+        if (document.querySelector('.modal.open, .opage.open, #lb.open, body.menu-open')) { busy = false; return; }   /* never interrupt a visitor who is reading an offer / filling a form */
+        const n = await (await fetch('/api/content', { cache: 'no-store' })).json();
+        if (n && n.shop && n.site) { C = n; renderAll(true); }
+      } }
+    } catch { /* offline: try again later */ }
+    busy = false;
+  };
+  window.cxSync = check;
+  setInterval(check, 12000); document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+}
+/* ---------- Find setting (admin only, inside ?pick=1) ---------- */
+function initPick() {
+  document.documentElement.classList.add('pk');
+  const bar = document.createElement('div'); bar.id = 'pkbar'; bar.textContent = '🎯 மாற்ற வேண்டியதைத் தொடுங்கள் · Tap what you want to change';
+  const box = document.createElement('div'); box.id = 'pkhl';
+  document.body.appendChild(bar); document.body.appendChild(box);
+  const txt = el => String(el && (el.innerText || el.textContent) || '').replace(/\s+/g, ' ').trim();
+  const place = el => { try { const r = el.getBoundingClientRect(); Object.assign(box.style, { display: 'block', left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' }); } catch { /* ignore */ } };
+  const pickEl = t => { if (!t || t.nodeType !== 1) return null; const l = t.closest('.ta,.en'); return l ? (l.parentElement || l) : t; };
+  addEventListener('pointerover', e => { const el = pickEl(e.target); if (el && el !== document.body && el !== document.documentElement && !el.closest('#pkbar')) place(el); }, true);
+  const urlOf = n => { if (n.tagName === 'IMG') return n.currentSrc || n.src || ''; const m = /url\(["']?([^"')]+)/.exec(getComputedStyle(n).backgroundImage || ''); return m ? m[1] : ''; };
+  addEventListener('click', e => {
+    if (e.target.closest && e.target.closest('#pkbar')) return;
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    const t = e.target; const el = pickEl(t); if (!el) return; place(el);
+    let texts = [];
+    const lang = t.closest && t.closest('.ta,.en');
+    if (lang && lang.parentElement) texts = [...lang.parentElement.querySelectorAll(':scope > .ta, :scope > .en')].map(txt);
+    if (!texts.filter(Boolean).length) { let n = t; for (let i = 0; i < 5 && n && n !== document.body; i++, n = n.parentElement) { const x = txt(n); if (x && x.length <= 300) { texts = [x]; break; } } }
+    texts = [...new Set(texts.filter(Boolean))].slice(0, 4).map(x => x.slice(0, 300));
+    const imgs = []; try { for (const n of document.elementsFromPoint(e.clientX, e.clientY).slice(0, 8)) { const u = urlOf(n); if (u && !imgs.includes(u)) imgs.push(u); } } catch { /* ignore */ }
+    const sec = (t.closest && (t.closest('#top') ? 'top' : t.closest('#foot') ? 'foot' : t.closest('#fest') ? 'fest' : (t.closest('section[id]') || t.closest('[id="home"]') || {}).id)) || '';
+    const ctx = t.closest && (t.closest('.opage') ? 'offer' : t.closest('#pModal') ? 'product' : t.closest('#enqModal') ? 'enquiry' : t.closest('#rvModal') ? 'review' : '') || '';
+    const kind = t.closest && t.closest('a.btn,button,.btn,[class*="btn"]') ? 'button' : (t.closest && t.closest('h1,h2,h3,h4,h5,h6') ? 'heading' : (texts.length ? 'text' : (imgs.length ? 'photo' : 'text')));
+    bar.textContent = '✓ கிடைத்தது · Found – opening in Admin…';
+    setTimeout(() => { try { parent.postMessage({ cxpick: { texts, imgs: imgs.slice(0, 6), sec, ctx, kind } }, location.origin); } catch { /* ignore */ } }, 350);
+  }, true);
+  ['submit', 'dblclick', 'contextmenu'].forEach(ev => addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }, true));
 }
 function visitCount() {
   let v = ''; try { v = localStorage.getItem('cx_v') || ''; if (!v) { v = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)).replace(/[^\w-]/g, ''); localStorage.setItem('cx_v', v); } } catch { v = Math.random().toString(36).slice(2) + Date.now().toString(36); }
-  const hit = k => { try { const b = JSON.stringify({ v, t: k }); if (navigator.sendBeacon) navigator.sendBeacon('/api/hit', new Blob([b], { type: 'application/json' })); else fetch('/api/hit', { method: 'POST', body: b, headers: { 'Content-Type': 'application/json' }, keepalive: true }); } catch {} };
+  let src = '', ref = ''; try { const q = new URLSearchParams(location.search); src = (q.get('src') || q.get('utm_source') || '').slice(0, 24); if (document.referrer) ref = new URL(document.referrer).hostname; } catch {}
+  const post = o => { try { const b = JSON.stringify(Object.assign({ v }, o)); if (navigator.sendBeacon) navigator.sendBeacon('/api/hit', new Blob([b], { type: 'application/json' })); else fetch('/api/hit', { method: 'POST', body: b, headers: { 'Content-Type': 'application/json' }, keepalive: true }); } catch {} };
+  const hit = k => post(k === 'view' ? { t: k, r: ref, s: src, tp: navigator.maxTouchPoints || 0 } : { t: k });
+  /* which product / offer / photo / section the visitor opened (counted once per visit) */
+  const sent = new Set();
+  window.cxTrack = (t, k, n) => { k = String(k || '').replace(/[^\w:-]/g, '').slice(0, 42); if (!k || sent.has(t + k)) return; sent.add(t + k); post({ t, k, n: String(n || '').slice(0, 80) }); };
   hit('view'); setInterval(() => { if (!document.hidden) hit('ping'); }, 25000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) hit('ping'); });
+  try { const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting && e.target.id) { io.unobserve(e.target); window.cxTrack('sec', e.target.id); } }), { threshold: 0.35 }); const obs = () => document.querySelectorAll('section.sec[id]').forEach(el => io.observe(el)); setTimeout(obs, 600); setTimeout(obs, 3000); } catch {}
 }
 boot();
 })();

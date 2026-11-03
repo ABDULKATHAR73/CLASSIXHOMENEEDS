@@ -1,4 +1,4 @@
-/* Classic Home Needs – shared typography module.
+/* Classix Home Needs – shared typography module.
  * Used by the server (renders the customer page + admin page, validates saves)
  * and by the admin panel (live preview). No dependencies. */
 (function (root, factory) {

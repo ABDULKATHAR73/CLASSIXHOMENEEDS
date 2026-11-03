@@ -1,4 +1,4 @@
-/* Classic Home Needs – admin panel. Runs on its own private URL and talks to the server API;
+/* Classix Home Needs – admin panel. Runs on its own private URL and talks to the server API;
    every save is written to the server and is live on the customer website immediately. */
 (() => {
 'use strict';
@@ -9,7 +9,7 @@ let C0 = null, authed = false, tab = 'dashboard', sub = {}, dirty = false, idleM
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const C = () => C0;
 const toast = (m, err) => { const t = $('#toast'); if (!t) return; t.textContent = m || (err ? 'Something went wrong. Please try again.' : 'Done'); t.className = 'toast show' + (err ? ' err' : ''); clearTimeout(toast.t); toast.t = setTimeout(() => t.className = 'toast', err ? 7000 : 3500); };
-const LBL = {"home":["முகப்பு","Home"],"products":["பொருட்கள்","Products"],"categories":["வகைகள்","Categories"],"rw":["சில்லறை & மொத்தம்","Retail & Wholesale"],"offers":["சலுகைகள்","Offers"],"gallery":["கடை படங்கள்","Shop Gallery"],"about":["எங்களைப் பற்றி","About"],"contact":["தொடர்பு","Contact"],"call":["அழைக்க","Call Now"],"wa":["வாட்ஸ்அப்","WhatsApp Us"],"visit":["கடைக்கு வாருங்கள்","Visit Store"],"details":["விவரங்கள்","View Details"],"enquire":["விசாரிக்க","Enquire Now"],"all":["அனைத்தும்","All"],"retail":["சில்லறை","Retail"],"wholesale":["மொத்தம்","Wholesale"],"general":["பொதுவான","General"],"viewProducts":["அனைத்துப் பொருட்களையும் பார்க்க","View All Products"],"retailBtn":["சில்லறைப் பொருட்கள்","Retail Products"],"whBtn":["மொத்த விசாரணை","Wholesale Enquiry"],"search":["பொருளைத் தேடுங்கள்...","Search products..."],"retailAv":["சில்லறையில் கிடைக்கும்","Available in retail"],"wholesaleAv":["மொத்தத்தில் கிடைக்கும்","Available in wholesale"],"notFound":["பொருள் எதுவும் இல்லை","No products found"],"directions":["வழி காட்டு","Get Directions"],"name":["உங்கள் பெயர்","Your name"],"phone":["மொபைல் எண்","Mobile number"],"msg":["உங்கள் விசாரணை","Your message"],"send":["WhatsApp-ல் அனுப்புக","Send on WhatsApp"],"quick":["விரைவு இணைப்புகள்","Quick Links"],"hours":["கடை நேரம்","Store Timings"],"address":["முகவரி","Address"],"ctaT":["மொத்தமாக வாங்க வேண்டுமா?","Looking to buy in bulk?"],"ctaS":["சிறப்பு மொத்த விலைக்கு இன்றே தொடர்பு கொள்ளுங்கள்","Contact us today for special wholesale prices"],"all2":["அனைத்து சலுகைகள்","All offers"],"askPrice":["விலைக்கு விசாரிக்கவும்","Ask for price"],"backBtn":["← திரும்ப","← Back"],"emailLbl":["மின்னஞ்சல்","Email"],"lastDay":["இன்றே கடைசி நாள்!","Last day!"],"daysLeft":["இன்னும் {n} நாட்கள்","{n} days left"],"dayLeft":["இன்னும் {n} நாள்","{n} day left"],"offerEnded":["இந்தச் சலுகை முடிந்தது","This offer has ended"],"offerPrice":["சலுகை விலை","Offer price"],"youSave":["நீங்கள் சேமிப்பது","You save"],"offerCount":["சலுகையில் உள்ள பொருட்கள்","Products in this offer"],"offerNow":["இப்போது","Now"],"offerOngoing":["தொடர்கிறது","Ongoing"],"offerPeriod":["சலுகைக் காலம்","Offer period"],"offerList":["சலுகையில் உள்ள பொருட்கள்","What is in this offer"],"offerIncl":["உள்ளடக்கம்","What's included"],"offerDetails":["சலுகை விவரங்கள்","Offer details"],"enqOffer":["இந்தச் சலுகையை விசாரிக்க","Enquire about this offer"],"errName":["பெயரை உள்ளிடவும்","Enter your name"],"errPhone":["சரியான 10 இலக்க எண்","Enter a valid 10-digit mobile number"],"waOpening":["WhatsApp திறக்கிறது…","Opening WhatsApp…"],"eyCat":["வகைகள்","Categories"],"eyProd":["பொருட்கள் காட்சி","Product Showcase"],"eyRw":["சில்லறை · மொத்தம்","Retail · Wholesale"],"eyOffers":["சலுகைகள்","Offers"],"eyWhy":["ஏன் நாங்கள்","Why us"],"eyGal":["படங்கள்","Gallery"],"eyContact":["வருகை தாருங்கள்","Visit us"],"eyReviews":["கருத்துகள்","Reviews"],"reviewsTitle":["வாடிக்கையாளர் கருத்துகள்","What Our Customers Say"],"enqTitle":["விசாரணை","Product Enquiry"],"sendEnq":["விசாரணை அனுப்புக","Send us an Enquiry"],"photosSoon":["படங்கள் விரைவில்","Photos coming soon"],"viewOffer":["சலுகை விவரங்கள்","View Offer Details"],"oos":["இருப்பு இல்லை","Out of stock"],"writeReview":["கருத்து எழுதுங்கள்","Write a review"],"rvAvg":["சராசரி மதிப்பீடு","Average rating"],"rvCount":["{n} கருத்துகள்","{n} reviews"],"rvCount1":["1 கருத்து","1 review"],"rvYourName":["உங்கள் பெயர்","Your name"],"rvYourRating":["உங்கள் மதிப்பீடு","Your rating"],"rvYourText":["உங்கள் கருத்து","Your review"],"rvSend":["கருத்தை அனுப்புக","Submit review"],"rvFormTitle":["உங்கள் அனுபவத்தைப் பகிருங்கள்","Share your experience"],"rvThanksPending":["நன்றி! உங்கள் கருத்து சரிபார்ப்புக்குப் பிறகு இணையதளத்தில் தோன்றும்.","Thank you! Your review will appear on the website after the shop approves it."],"rvThanksLive":["நன்றி! உங்கள் கருத்து இணையதளத்தில் சேர்க்கப்பட்டது.","Thank you! Your review is now on the website."],"rvErrName":["பெயரை உள்ளிடவும் (2+ எழுத்துகள்)","Enter your name (2+ letters)"],"rvErrRating":["நட்சத்திர மதிப்பீட்டைத் தேர்ந்தெடுக்கவும்","Choose a star rating"],"rvErrText":["கருத்தை எழுதவும் (1–500 எழுத்துகள்)","Write your review (1 to 500 letters)"],"rvErrLinks":["இணைப்புகளைச் சேர்க்க வேண்டாம்","Please do not include web links"],"rvErrLimit":["நிறைய கருத்துகள் அனுப்பப்பட்டுள்ளன. பிறகு முயற்சிக்கவும்.","Too many reviews sent. Please try again later."],"rvErr":["அனுப்ப முடியவில்லை. மீண்டும் முயற்சிக்கவும்.","Could not send. Please try again."],"rvShopReply":["கடையின் பதில்","Reply from the shop"],"rvMore":["மேலும் கருத்துகள்","Show more reviews"],"rvNone":["இன்னும் கருத்துகள் இல்லை. முதல் கருத்தை நீங்கள் எழுதுங்கள்!","No reviews yet. Be the first to write one!"],"viewAllOffers":["மேலும் ஆஃபர்கள் பார்க்க","View All Offers"],"offersAllTitle":["அனைத்து ஆஃபர்கள்","All Offers"],"totalOffers":["மொத்த ஆஃபர்கள்","Total Offers"],"productsIncluded":["{n} பொருட்கள் இந்த ஆஃபரில்","{n} Products Included"],"offerWhat":["இந்த ஆஃபரில் என்னென்ன பொருட்கள்?","What's included in this offer?"],"offerTotalProducts":["மொத்த பொருட்கள்","Total Products"],"specialPrice":["சிறப்பு விலை","Special Price"],"totalLbl":["மொத்தம்","Total"],"closeBtn":["மூடு","Close"],"seeMoreImg":["மேலும் படங்கள்","See More Images"],"totalImages":["மொத்த படங்கள்","Total Images"],"galAllTitle":["கடை படங்கள்","Shop Gallery"],"seeAllReviews":["அனைத்து விமர்சனங்கள்","See All Reviews"],"totalReviews":["மொத்த விமர்சனங்கள்","Total Reviews"],"rvAllTitle":["வாடிக்கையாளர் கருத்துகள்","Customer Reviews"],"backWeb":["முகப்புப் பக்கத்திற்குத் திரும்ப","Back to Website"],"pdfLbl":["PDF கோப்பு","PDF file"],"productsWord":["பொருட்கள்","Products"],"of_view":["சலுகையைப் பார்க்க","View offer"],"of_items":["பொருட்கள்","items"],"of_inc":["இந்தச் சலுகையில்","What's inside"],"of_price":["சிறப்பு விலை","Special price"],"of_save":["சேமிப்பு","You save"],"of_ends":["சலுகை முடிய","Offer ends in"],"of_d":["நாள்","Days"],"of_h":["மணி","Hrs"],"of_m":["நிமி","Min"],"of_s":["வினா","Sec"],"of_from":["தொடக்கம்","Starts"],"of_till":["முடிவு","Ends"],"of_terms":["நிபந்தனைகள்","Terms & conditions"],"of_more":["சலுகை விவரங்கள்","Offer details"],"of_photos":["படங்கள்","Photos"],"of_enq":["இந்தச் சலுகை பற்றி விசாரிக்க","Enquire about this offer"],"of_ended":["இந்தச் சலுகை முடிந்துவிட்டது","This offer has ended"],"of_soon":["விரைவில் தொடங்கும்","Starting soon"]};
+const LBL = {"home":["முகப்பு","Home"],"products":["பொருட்கள்","Products"],"categories":["வகைகள்","Categories"],"rw":["சில்லறை & மொத்தம்","Retail & Wholesale"],"offers":["சலுகைகள்","Offers"],"gallery":["கடை படங்கள்","Shop Gallery"],"about":["எங்களைப் பற்றி","About"],"contact":["தொடர்பு","Contact"],"call":["அழைக்க","Call Now"],"wa":["வாட்ஸ்அப்","WhatsApp Us"],"visit":["கடைக்கு வாருங்கள்","Visit Store"],"details":["விவரங்கள்","View Details"],"enquire":["விசாரிக்க","Enquire Now"],"all":["அனைத்தும்","All"],"retail":["சில்லறை","Retail"],"wholesale":["மொத்தம்","Wholesale"],"general":["பொதுவான","General"],"viewProducts":["அனைத்துப் பொருட்களையும் பார்க்க","View All Products"],"retailBtn":["சில்லறைப் பொருட்கள்","Retail Products"],"whBtn":["மொத்த விசாரணை","Wholesale Enquiry"],"search":["பொருளைத் தேடுங்கள்...","Search products..."],"retailAv":["சில்லறையில் கிடைக்கும்","Available in retail"],"wholesaleAv":["மொத்தத்தில் கிடைக்கும்","Available in wholesale"],"notFound":["பொருள் எதுவும் இல்லை","No products found"],"directions":["வழி காட்டு","Get Directions"],"name":["உங்கள் பெயர்","Your name"],"phone":["மொபைல் எண்","Mobile number"],"msg":["உங்கள் விசாரணை","Your message"],"send":["WhatsApp-ல் அனுப்புக","Send on WhatsApp"],"quick":["விரைவு இணைப்புகள்","Quick Links"],"hours":["கடை நேரம்","Store Timings"],"address":["முகவரி","Address"],"ctaT":["மொத்தமாக வாங்க வேண்டுமா?","Looking to buy in bulk?"],"ctaS":["சிறப்பு மொத்த விலைக்கு இன்றே தொடர்பு கொள்ளுங்கள்","Contact us today for special wholesale prices"],"all2":["அனைத்து சலுகைகள்","All offers"],"askPrice":["விலைக்கு விசாரிக்கவும்","Ask for price"],"backBtn":["← திரும்ப","← Back"],"emailLbl":["மின்னஞ்சல்","Email"],"lastDay":["இன்றே கடைசி நாள்!","Last day!"],"daysLeft":["இன்னும் {n} நாட்கள்","{n} days left"],"dayLeft":["இன்னும் {n} நாள்","{n} day left"],"offerEnded":["இந்தச் சலுகை முடிந்தது","This offer has ended"],"offerPrice":["சலுகை விலை","Offer price"],"youSave":["நீங்கள் சேமிப்பது","You save"],"offerCount":["சலுகையில் உள்ள பொருட்கள்","Products in this offer"],"offerNow":["இப்போது","Now"],"offerOngoing":["தொடர்கிறது","Ongoing"],"offerPeriod":["சலுகைக் காலம்","Offer period"],"offerList":["சலுகையில் உள்ள பொருட்கள்","What is in this offer"],"offerIncl":["உள்ளடக்கம்","What's included"],"offerDetails":["சலுகை விவரங்கள்","Offer details"],"enqOffer":["இந்தச் சலுகையை விசாரிக்க","Enquire about this offer"],"errName":["பெயரை உள்ளிடவும்","Enter your name"],"errPhone":["சரியான 10 இலக்க எண்","Enter a valid 10-digit mobile number"],"waOpening":["WhatsApp திறக்கிறது…","Opening WhatsApp…"],"eyCat":["வகைகள்","Categories"],"eyProd":["பொருட்கள் காட்சி","Product Showcase"],"eyRw":["சில்லறை · மொத்தம்","Retail · Wholesale"],"eyOffers":["சலுகைகள்","Offers"],"eyWhy":["ஏன் நாங்கள்","Why us"],"eyGal":["படங்கள்","Gallery"],"eyContact":["வருகை தாருங்கள்","Visit us"],"eyReviews":["கருத்துகள்","Reviews"],"reviewsTitle":["வாடிக்கையாளர் கருத்துகள்","What Our Customers Say"],"enqTitle":["விசாரணை","Product Enquiry"],"sendEnq":["விசாரணை அனுப்புக","Send us an Enquiry"],"photosSoon":["படங்கள் விரைவில்","Photos coming soon"],"viewOffer":["சலுகை விவரங்கள்","View Offer Details"],"oos":["இருப்பு இல்லை","Out of stock"],"writeReview":["கருத்து எழுதுங்கள்","Write a review"],"rvAvg":["சராசரி மதிப்பீடு","Average rating"],"rvCount":["{n} கருத்துகள்","{n} reviews"],"rvCount1":["1 கருத்து","1 review"],"rvYourName":["உங்கள் பெயர்","Your name"],"rvYourRating":["உங்கள் மதிப்பீடு","Your rating"],"rvYourText":["உங்கள் கருத்து","Your review"],"rvSend":["கருத்தை அனுப்புக","Submit review"],"rvFormTitle":["உங்கள் அனுபவத்தைப் பகிருங்கள்","Share your experience"],"rvThanksPending":["நன்றி! உங்கள் கருத்து சரிபார்ப்புக்குப் பிறகு இணையதளத்தில் தோன்றும்.","Thank you! Your review will appear on the website after the shop approves it."],"rvThanksLive":["நன்றி! உங்கள் கருத்து இணையதளத்தில் சேர்க்கப்பட்டது.","Thank you! Your review is now on the website."],"rvErrName":["பெயரை உள்ளிடவும் (2+ எழுத்துகள்)","Enter your name (2+ letters)"],"rvErrRating":["நட்சத்திர மதிப்பீட்டைத் தேர்ந்தெடுக்கவும்","Choose a star rating"],"rvErrText":["கருத்தை எழுதவும் (1–500 எழுத்துகள்)","Write your review (1 to 500 letters)"],"rvErrLinks":["இணைப்புகளைச் சேர்க்க வேண்டாம்","Please do not include web links"],"rvErrLimit":["நிறைய கருத்துகள் அனுப்பப்பட்டுள்ளன. பிறகு முயற்சிக்கவும்.","Too many reviews sent. Please try again later."],"rvErr":["அனுப்ப முடியவில்லை. மீண்டும் முயற்சிக்கவும்.","Could not send. Please try again."],"rvShopReply":["கடையின் பதில்","Reply from the shop"],"rvMore":["மேலும் கருத்துகள்","Show more reviews"],"rvNone":["இன்னும் கருத்துகள் இல்லை. முதல் கருத்தை நீங்கள் எழுதுங்கள்!","No reviews yet. Be the first to write one!"],"viewAllOffers":["மேலும் ஆஃபர்கள் பார்க்க","View All Offers"],"offersAllTitle":["அனைத்து ஆஃபர்கள்","All Offers"],"totalOffers":["மொத்த ஆஃபர்கள்","Total Offers"],"productsIncluded":["{n} பொருட்கள் இந்த ஆஃபரில்","{n} Products Included"],"offerWhat":["இந்த ஆஃபரில் என்னென்ன பொருட்கள்?","What's included in this offer?"],"offerTotalProducts":["மொத்த பொருட்கள்","Total Products"],"specialPrice":["சிறப்பு விலை","Special Price"],"totalLbl":["மொத்தம்","Total"],"closeBtn":["மூடு","Close"],"seeMoreImg":["மேலும் படங்கள்","See More Images"],"totalImages":["மொத்த படங்கள்","Total Images"],"galAllTitle":["கடை படங்கள்","Shop Gallery"],"seeAllReviews":["அனைத்து விமர்சனங்கள்","See All Reviews"],"totalReviews":["மொத்த விமர்சனங்கள்","Total Reviews"],"rvAllTitle":["வாடிக்கையாளர் கருத்துகள்","Customer Reviews"],"backWeb":["முகப்புப் பக்கத்திற்குத் திரும்ப","Back to Website"],"pdfLbl":["PDF கோப்பு","PDF file"],"productsWord":["பொருட்கள்","Products"],"of_view":["சலுகையைப் பார்க்க","View offer"],"of_items":["பொருட்கள்","items"],"of_inc":["இந்தச் சலுகையில்","What's inside"],"of_price":["சிறப்பு விலை","Special price"],"of_save":["சேமிப்பு","You save"],"of_ends":["சலுகை முடிய","Offer ends in"],"of_d":["நாள்","Days"],"of_h":["மணி","Hrs"],"of_m":["நிமி","Min"],"of_s":["வினா","Sec"],"of_from":["தொடக்கம்","Starts"],"of_till":["முடிவு","Ends"],"of_terms":["நிபந்தனைகள்","Terms & conditions"],"of_more":["சலுகை விவரங்கள்","Offer details"],"of_photos":["படங்கள்","Photos"],"of_enq":["இந்தச் சலுகை பற்றி விசாரிக்க","Enquire about this offer"],"of_ended":["இந்தச் சலுகை முடிந்துவிட்டது","This offer has ended"],"of_soon":["விரைவில் தொடங்கும்","Starting soon"],"exitTitle":["இணையதளத்தை விட்டு வெளியேறவா?","Leave the website?"],"exitText":["பொருட்களையும் சலுகைகளையும் தொடர்ந்து பாருங்கள்.","Keep browsing our products and special offers."],"exitStay":["இங்கேயே இருக்கிறேன்","Stay here"],"exitGo":["வெளியேறு","Exit"],"exitHint":["மீண்டும் Back அழுத்தினால் வெளியேறும்","Press Back again to exit"],"offerTap":["தொட்டுப் பார்க்க","Tap to see"],"prodAllTitle":["அனைத்துப் பொருட்கள்","All Products"],"totalProducts":["மொத்த பொருட்கள்","Total Products"]};
 Object.assign(LBL, {viewAllOffers:['மேலும் ஆஃபர்கள் பார்க்க','View All Offers'],offersAllTitle:['அனைத்து ஆஃபர்கள்','All Offers'],totalOffers:['மொத்த ஆஃபர்கள்','Total Offers'],productsIncluded:['{n} பொருட்கள் இந்த ஆஃபரில்','{n} Products Included'],offerWhat:['இந்த ஆஃபரில் என்னென்ன பொருட்கள்?',"What's included in this offer?"],offerTotalProducts:['மொத்த பொருட்கள்','Total Products'],specialPrice:['சிறப்பு விலை','Special Price'],totalLbl:['மொத்தம்','Total'],closeBtn:['மூடு','Close'],seeMoreImg:['மேலும் படங்கள்','See More Images'],totalImages:['மொத்த படங்கள்','Total Images'],galAllTitle:['கடை படங்கள்','Shop Gallery'],seeAllReviews:['அனைத்து விமர்சனங்கள்','See All Reviews'],totalReviews:['மொத்த விமர்சனங்கள்','Total Reviews'],rvAllTitle:['வாடிக்கையாளர் கருத்துகள்','Customer Reviews'],productsWord:['பொருட்கள்','Products']});
 const uid = p => p + Math.random().toString(36).slice(2, 8);
 
@@ -260,7 +260,18 @@ async function saveContent(body) {
 }
 
 /* ---------- layout ---------- */
-const NAV = [['dashboard', '📊', 'Dashboard'], ['products', '📦', 'Products'], ['prices', '💰', 'Price List'], ['categories', '🗂️', 'Categories'], ['offers', '🏷️', 'Offers & Festivals'], ['reviews', '⭐', 'Customer Reviews'], ['home', '🏠', 'Home Page Settings'], ['chrome', '🧱', 'Header & Footer'], ['display', '📐', 'Display & Sizes'], ['typography', '🔤', 'Typography Settings'], ['stats', '📈', 'Visitor Stats'], ['menu', '🧭', 'Menu & Sections'], ['labels', '✏️', 'Website Text & Labels'], ['gallery', '🖼️', 'Gallery Management'], ['rw', '🏪', 'Retail & Wholesale Settings'], ['contact', '📞', 'Contact Settings'], ['store', '⚙️', 'Store Settings'], ['social', '🔗', 'Social Media Settings'], ['backup', '🛡️', 'Backup & Security']];
+const NAV_ALL = { dashboard: ['📊', 'Dashboard'], chrome: ['🧱', 'Header & Footer'], banner: ['🎞️', 'Offers Banner Studio'], home: ['🏠', 'Home Page Settings'], categories: ['🗂️', 'Categories'], products: ['📦', 'Products'], prices: ['💰', 'Price List'], rw: ['🏪', 'Retail & Wholesale Settings'], offers: ['🏷️', 'Offers & Festivals'], gallery: ['🖼️', 'Gallery Management'], reviews: ['⭐', 'Customer Reviews'], contact: ['📞', 'Contact Settings'], social: ['🔗', 'Social Media Settings'], store: ['⚙️', 'Store Settings'], display: ['📐', 'Display & Sizes'], typography: ['🔤', 'Typography Settings'], menu: ['🧭', 'Menu & Sections'], labels: ['✏️', 'Website Text & Labels'], stats: ['📈', 'Visitor Stats'], backup: ['🛡️', 'Backup & Security'] };
+/* The admin menu follows the customer website from top to bottom: header, offers banner, hero, then every home-page section in the order chosen in Menu & Sections, then the footer and the site-wide settings. */
+const SEC_TO_NAV = { categories: ['categories'], products: ['products', 'prices'], rw: ['rw'], offers: ['offers'], gallery: ['gallery'], testimonials: ['reviews'], contact: ['contact'] };
+function buildNav() {
+  const DEF = ['stats', 'strips', 'categories', 'products', 'rw', 'offers', 'why', 'gallery', 'about', 'testimonials', 'contact', 'cta'];
+  let order = DEF; try { const sv = (typeof C === 'function' && C().site && Array.isArray(C().site.sections)) ? C().site.sections.map(x => x && x.id).filter(id => DEF.includes(id)) : []; order = [...new Set([...sv, ...DEF])]; } catch { /* default order */ }
+  const keys = ['dashboard', 'chrome', 'banner', 'home'];
+  for (const id of order) for (const k of (SEC_TO_NAV[id] || [])) if (!keys.includes(k)) keys.push(k);
+  for (const k of ['social', 'store', 'display', 'typography', 'menu', 'labels', 'stats', 'backup']) keys.push(k);
+  return keys.map(k => [k, NAV_ALL[k][0], NAV_ALL[k][1]]);
+}
+let NAV = buildNav();
 const MQ = matchMedia('(max-width:860px)');
 let sideOpen = false;
 function setSide(open, focus = true) {
@@ -269,18 +280,20 @@ function setSide(open, focus = true) {
   document.body.classList.toggle('noscroll', open && MQ.matches);
   if (focus) (open ? $('#sideClose') : $('#menuBtn')).focus();
   if (!MQ.matches) { try { localStorage.setItem('cx-side', open ? '1' : '0'); } catch { /* ignore */ } }
+  aSync();
 }
 function layout() {
   if (!$('#shell')) {
     $('#app').innerHTML = `<div class="shell" id="shell"><div class="scrim" id="scrim"></div>
-    <aside id="side" aria-label="Admin menu" aria-hidden="true"><div class="side-top"><div><div class="lg">Classic Home Needs</div><div class="sm">Admin Dashboard</div></div><button type="button" class="side-close" id="sideClose" aria-label="Close menu">✕ <span>Close</span></button></div>
-    <div class="nvs"><input type="search" id="navSearch" placeholder="Search any option… (whatsapp, price, phone)" autocomplete="off" aria-label="Search admin options"></div><div id="navRes" class="nv-res" hidden></div><nav aria-label="Admin sections">${NAV.map(([k, i, l]) => `<button type="button" class="nv" data-tab="${k}"><span>${i}</span>${l}</button>`).join('')}</nav>
+    <aside id="side" aria-label="Admin menu" aria-hidden="true"><div class="side-top"><div><div class="lg">Classix Home Needs</div><div class="sm">Admin Dashboard</div></div><button type="button" class="side-close" id="sideClose" aria-label="Close menu">✕ <span>Close</span></button></div>
+    <button type="button" class="nv find-nv" id="findBtn" title="Open the website here, tap anything, and see every setting for it"><span>🎯</span>Find setting</button>
+    <div class="nvs"><input type="search" id="navSearch" placeholder="Search any option… (whatsapp, price, phone)" autocomplete="off" aria-label="Search admin options"></div><div id="navRes" class="nv-res" hidden></div><nav aria-label="Admin sections">${(NAV = buildNav()).map(([k, i, l]) => `<button type="button" class="nv" data-tab="${k}"><span>${i}</span>${l}</button>`).join('')}</nav>
     <button type="button" class="nv" id="logoutBtn" style="margin-top:14px"><span>🚪</span>Sign out</button></aside>
     <div class="main"><div class="top"><button type="button" class="btn out ic menu-btn" id="menuBtn" aria-controls="side" aria-expanded="false" aria-label="Open menu">☰ <span>Menu</span></button><b>Admin</b>
       <div class="tools" role="group" aria-label="Refresh buttons"><button type="button" class="btn out sm" id="adminRefresh" title="Reload the data in this admin panel (you stay on this page)">↻ Refresh Admin Panel</button><button type="button" class="btn gold sm" id="customerRefresh" title="Open or reload the customer website in another tab">🌐 Refresh Customer Website</button></div></div>
     <div class="content" id="content"></div></div></div>`;
     $$('#side [data-tab]').forEach(b => b.onclick = () => { tab = b.dataset.tab; if (MQ.matches) setSide(false, false); layout(); render(); window.scrollTo(0, 0); });
-    const NAV_KW = { dashboard: 'overview summary home today', products: 'product item stock add edit delete photo image', prices: 'price rate mrp cost list', categories: 'category categories group type', offers: 'offer festival discount sale deepavali pongal diwali coupon', reviews: 'review rating feedback comment testimonial', home: 'home hero banner slider welcome stats counter', chrome: 'header footer logo name top bottom', display: 'display size font whatsapp button floating chat icon width', typography: 'typography font style text letter bold tamil', stats: 'visitors visits views traffic analytics online', menu: 'menu section order show hide arrange move', labels: 'text label words language tamil english translate title', gallery: 'gallery photo photos image picture shop', rw: 'retail wholesale bulk minimum quantity', contact: 'contact phone mobile call address map email timing hours opening closing location', store: 'store shop open close holiday settings', social: 'social facebook instagram youtube whatsapp group channel link telegram twitter on off', backup: 'backup restore zip download upload password security login admin sign' };;
+    const NAV_KW = { dashboard: 'overview summary home today', products: 'product item stock add edit delete photo image', prices: 'price rate mrp cost list', categories: 'category categories group type', offers: 'offer festival discount sale deepavali pongal diwali coupon', banner: 'banner swipe slider animation effect smooth speed height size preview button countdown confetti lag', reviews: 'review rating feedback comment testimonial', home: 'home hero banner slider welcome stats counter', chrome: 'header footer logo name top bottom', display: 'display size font whatsapp button floating chat icon width', typography: 'typography font style text letter bold tamil', stats: 'visitors visits views traffic analytics online', menu: 'menu section order show hide arrange move', labels: 'text label words language tamil english translate title', gallery: 'gallery photo photos image picture shop', rw: 'retail wholesale bulk minimum quantity', contact: 'contact phone mobile call address map email timing hours opening closing location', store: 'store shop open close holiday settings', social: 'social facebook instagram youtube whatsapp group channel link telegram twitter on off', backup: 'backup restore zip download upload password security login admin sign' };;
     /* ---- deep search: every menu, section and setting field ---- */
     const EXTRA = [
       ['backup', 'Download full backup (ZIP)', 'Backup & Security', 'zip download everything photos settings'], ['backup', 'Restore full backup', 'Backup & Security', 'upload zip restore recover'],
@@ -341,7 +354,7 @@ function layout() {
     $('#navRes').onclick = ev => { const b = ev.target.closest('.sr'); if (!b) return; openHit(navHits[+b.dataset.i]); $('#navSearch').value = ''; navFilter(); };
     $('#navSearch').onkeydown = ev => { if (ev.key === 'Enter') { ev.preventDefault(); if (navHits[0]) { openHit(navHits[0]); $('#navSearch').value = ''; navFilter(); } } else if (ev.key === 'Escape') { $('#navSearch').value = ''; navFilter(); } };
     $('#menuBtn').onclick = () => setSide(!sideOpen); $('#sideClose').onclick = () => setSide(false); $('#scrim').onclick = () => setSide(false, false);
-    $('#logoutBtn').onclick = logout; $('#adminRefresh').onclick = refreshAdmin; $('#customerRefresh').onclick = () => openCustomer();
+    $('#logoutBtn').onclick = logout; $('#adminRefresh').onclick = refreshAdmin; $('#findBtn').onclick = () => { if (MQ.matches) setSide(false, false); openPick(); }; $('#customerRefresh').onclick = () => openCustomer();
     let stored = '1'; try { stored = localStorage.getItem('cx-side') || '1'; } catch { /* ignore */ }
     setSide(!MQ.matches && stored !== '0', false);
   }
@@ -349,6 +362,150 @@ function layout() {
 }
 MQ.addEventListener('change', () => { if ($('#shell')) { let st = '1'; try { st = localStorage.getItem('cx-side') || '1'; } catch { /* ignore */ } setSide(!MQ.matches && st !== '0', false); } });
 document.addEventListener('keydown', e => { if (e.key !== 'Escape' || !sideOpen || e.defaultPrevented) return; const t = e.target; if (t && t.matches && t.matches('input,textarea,select') ) return; setSide(false); });
+/* ---------- v4.17 Find setting: tap anything on the customer website, the admin opens (and highlights) that exact setting ---------- */
+const pkClean = t => String(t || '').replace(/\s+/g, ' ').trim();
+const pkNorm = t => String(t || '').normalize('NFC').replace(/[\u00a0\u00ad\u200b-\u200d\u2060\ufeff]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+const pkPath = u => { try { return decodeURIComponent(new URL(u, location.href).pathname); } catch { return String(u || '').split('?')[0]; } };
+const PK_SEC = { top: 'chrome', foot: 'chrome', fest: 'banner', home: 'home', stats: 'home', strips: 'home', why: 'home', about: 'home', cta: 'home', categories: 'categories', products: 'products', rw: 'rw', offers: 'offers', gallery: 'gallery', testimonials: 'reviews', contact: 'contact' };
+const PK_CTX = { offer: 'offers', product: 'products', enquiry: 'labels', review: 'labels' };
+function pkCollect(root) {
+  const out = [], secOf = el => {
+    let n = el.closest('.f, .lrow, tr, .item') || el;
+    while (n && !(n.classList && n.classList.contains('card'))) { let q = n; while ((q = q.previousElementSibling)) if (q.tagName === 'H3') return pkClean(q.textContent).slice(0, 60); n = n.parentElement; }
+    const cd = el.closest('.card'), h = cd && cd.querySelector('h3'); return h ? pkClean(h.textContent).slice(0, 60) : '';
+  };
+  const itemOf = el => { const it = el.closest('.item'); if (!it) return ''; const f = it.querySelector('input:not([type]),input[type=text],textarea'); return f ? pkClean(f.value).slice(0, 40) : ''; };
+  root.querySelectorAll('input, textarea').forEach(inp => {
+    const t = (inp.type || 'text').toLowerCase(), f = inp.closest('.f'), lb = f && f.querySelector(':scope > label');
+    const box = inp.closest('.lrow, tr[data-pid], .f') || inp.parentElement; if (!box) return;
+    if (t === 'hidden') { const v = inp.value; if (/^(\/uploads\/|\/assets\/|https?:)/.test(v)) out.push({ box, vals: [], imgs: [v], label: pkClean(lb ? lb.textContent : 'Photo'), sec: secOf(inp), item: itemOf(inp) }); return; }
+    if (inp.id === 'navSearch') return;
+    if (['checkbox', 'range', 'color', 'number'].includes(t)) {
+      if (!f || inp.closest('tr[data-pid]')) return;
+      let lab = pkClean(lb ? lb.textContent : ''); if (f.querySelector('[data-rv]')) lab = lab.replace(/:\s*-?[\d.]+\s*[a-z%]*$/i, ''); if (!lab) return;
+      out.push({ box, vals: [], imgs: [], label: lab, sec: secOf(inp), item: itemOf(inp), ctl: true, cur: t === 'checkbox' ? (inp.checked ? 'ON' : 'OFF') : (inp.value + (inp.dataset.unit || '')) }); return;
+    }
+    if (['radio', 'file', 'password', 'search', 'date', 'button', 'submit'].includes(t)) return;
+    let vals = inp.tagName === 'TEXTAREA' && inp.hasAttribute('data-lines') ? inp.value.split('\n') : [inp.value], ph = false;
+    if (!vals.some(v => pkClean(v)) && inp.placeholder) { vals = [inp.placeholder]; ph = true; }
+    vals = vals.map(pkClean).filter(Boolean); if (!vals.length) return;
+    let label = pkClean(lb ? lb.textContent : (inp.placeholder || ''));
+    const row = inp.closest('.lrow'); if (row) { const b = row.querySelector(':scope > b'); label = (b ? pkClean(b.textContent) + ' – ' : '') + label; }
+    out.push({ box, vals, imgs: [], label: label || 'Text', sec: secOf(inp), item: itemOf(inp), ph });
+  });
+  root.querySelectorAll('select').forEach(sl => { const f = sl.closest('.f'), lb = f && f.querySelector(':scope > label'); if (!f || !lb || sl.closest('tr[data-pid]')) return; const o = sl.options[sl.selectedIndex]; out.push({ box: f, vals: [], imgs: [], label: pkClean(lb.textContent), sec: secOf(sl), item: itemOf(sl), ctl: true, cur: o ? pkClean(o.textContent).slice(0, 30) : '' }); });
+  root.querySelectorAll('[data-imgs]').forEach(w => { const urls = [...w.querySelectorAll('[data-u]')].map(x => x.dataset.u).filter(Boolean); if (!urls.length) return; const f = w.closest('.f'), lb = f && f.querySelector(':scope > label'); out.push({ box: f || w, vals: [], imgs: urls, label: pkClean(lb ? lb.textContent : 'Photos').replace(/\(.*$/, '').trim(), sec: secOf(w), item: itemOf(w) }); });
+  root.querySelectorAll('.pv').forEach(p => { if (p.closest('[data-img]')) return; const m = /url\(["']?([^"')]+)/.exec(p.getAttribute('style') || ''); if (m) out.push({ box: p.closest('.item') || p, vals: [], imgs: [m[1]], label: 'Photo', sec: secOf(p), item: itemOf(p) }); });
+  return out;
+}
+function pkScore(en, info) {
+  let best = 0;
+  for (const t0 of info.texts) {
+    const t = pkNorm(t0); if (t.length < 2) continue;
+    for (const v0 of en.vals) {
+      const v = pkNorm(v0); if (!v) continue; let s = 0; const mn = Math.min(v.length, t.length), mx = Math.max(v.length, t.length);
+      if (v === t) s = 100; else if (mn >= 3 && (v.includes(t) || t.includes(v))) { s = 40 + 40 * mn / mx; if (s < 60 && mn < 10) s = 0; }
+      if (s > best) best = s;
+    }
+  }
+  if (info.useImg) for (const u of info.imgs) { const p = pkPath(u); if (p && en.imgs.some(w => pkPath(w) === p)) best = Math.max(best, 95); }
+  return en.ph ? best * 0.96 : best;
+}
+let PK_IDX = null;
+function pkBuildIdx() {
+  if (PK_IDX && PK_IDX.c === C() && PK_IDX.v === (C() && C().v)) return PK_IDX.list;
+  const list = [], keep = { tab, sub: { ...sub }, dirty }, dae = document.addEventListener, wae = window.addEventListener;
+  const mount = document.createElement('div'); mount.setAttribute('aria-hidden', 'true'); mount.style.cssText = 'position:fixed;left:-99999px;top:0;width:900px;visibility:hidden;pointer-events:none';
+  document.body.insertBefore(mount, document.body.firstChild);
+  document.addEventListener = () => {}; window.addEventListener = () => {};
+  const draw = (k, s) => { const box = document.createElement('div'); mount.appendChild(box); tab = k; sub = s ? { [k]: s } : {}; try { views[k](box); return box; } catch { box.remove(); return null; } };
+  try {
+    for (const b of $$('#side nav [data-tab]')) {
+      const k = b.dataset.tab; if (['dashboard', 'stats', 'reviews', 'backup'].includes(k) || !views[k]) continue;
+      const tn = pkClean(b.textContent), first = draw(k, ''); if (!first) continue;
+      const subs = [...first.querySelectorAll('.tabs [data-s]')].map(x => x.dataset.s), on = first.querySelector('.tabs [data-s].on'), cur = on ? on.dataset.s : '';
+      const add = (bx, s) => pkCollect(bx).forEach(en => { delete en.box; list.push({ ...en, tab: k, sub: s, tabName: tn }); });
+      add(first, cur); first.remove();
+      for (const s of subs) { if (s === cur) continue; const bx = draw(k, s); if (bx) { add(bx, s); bx.remove(); } }
+    }
+    /* every product has its own edit form – index each one so tapping a product on the website finds its fields */
+    for (const pr of ((C() && C().products) || []).slice(0, 200)) {
+      tab = 'products'; sub = { editP: pr.id }; const bx = document.createElement('div'); mount.appendChild(bx);
+      try { views.products(bx); pkCollect(bx).forEach(en => { delete en.box; list.push({ ...en, tab: 'products', sub: '', edit: pr.id, item: pr.name || '', tabName: '📦Products' }); }); } catch { /* skip this product */ }
+      bx.remove();
+    }
+  } finally { document.addEventListener = dae; window.addEventListener = wae; mount.remove(); tab = keep.tab; sub = keep.sub; dirty = keep.dirty; }
+  PK_IDX = { c: C(), v: C() && C().v, list }; return list;
+}
+const PK_NAME = { top: 'Header', foot: 'Footer', fest: 'Offers banner', home: 'Hero (top of the home page)', stats: 'Numbers strip', strips: 'Highlight strip', categories: 'Categories', products: 'Products', rw: 'Retail & Wholesale', offers: 'Offers', gallery: 'Gallery', testimonials: 'Reviews', contact: 'Contact', why: 'Why choose us', about: 'About', cta: 'Bulk-buy banner' };
+const PK_KW = { top: 'header menu logo', foot: 'footer', fest: 'banner', home: 'hero', stats: 'number counter', strips: 'strip', categories: 'categor', products: 'product', rw: 'retail wholesale', offers: 'offer', gallery: 'gallery', testimonials: 'review', contact: 'contact', why: 'why', about: 'about', cta: 'banner bulk' };
+const PK_KIND = { button: 'Button', heading: 'Heading', text: 'Text', photo: 'Photo' };
+function pkAnalyze(info) {
+  const idx = pkBuildIdx(); info.useImg = false;   /* the words you tapped come first; photos only when no words match */
+  const home = PK_CTX[info.ctx] || PK_SEC[info.sec], bonus = en => (en.tab === home ? 4 : 0);   /* the page that owns the part you tapped comes first */
+  const rank = () => idx.map(en => { const s = pkScore(en, info); return { en, s: s > 0 ? s + bonus(en) : 0 }; }).filter(h => h.s > 0).sort((a, b) => b.s - a.s);
+  let hits = rank();
+  if (!hits.length) { info.useImg = true; hits = rank(); }
+  if (!hits.length) return null;
+  const prim = hits.filter(h => h.s >= hits[0].s - 5).slice(0, 8).map(h => h.en), p = prim[0];
+  const same = prim.filter(e => e.tab === p.tab && (e.sub || '') === (p.sub || ''));
+  const secs = new Set(same.map(e => e.sec));
+  const near = idx.filter(e => e.tab === p.tab && (e.sub || '') === (p.sub || '') && secs.has(e.sec) && (!p.item || e.item === p.item) && !prim.includes(e)).slice(0, 14);
+  const kw = (PK_KW[info.sec] || '').split(' ').filter(Boolean), kk = { button: ['button', 'btn'], heading: ['title', 'heading', 'font', 'size'], text: ['font', 'size', 'text'], photo: ['photo', 'image', 'picture', 'height', 'size', 'ratio'] }[info.kind] || ['size', 'font'];
+  const style = idx.filter(e => ['display', 'typography'].includes(e.tab) && !prim.includes(e)).map(e => { const l = e.label.toLowerCase(); let n = 0; kk.forEach(w => { if (l.includes(w)) n += 2; }); kw.forEach(w => { if (l.includes(w)) n += 3; }); return { e, n }; }).filter(x => x.n >= 2).sort((a, b) => b.n - a.n).slice(0, 10).map(x => x.e);
+  return { prim, near, style };
+}
+function pkGo(en) {
+  const btn = $(`#side nav [data-tab="${en.tab}"]`); if (!btn) return;
+  if (en.sub) sub[en.tab] = en.sub; else delete sub[en.tab];
+  if (en.edit) sub.editP = en.edit; else if (en.tab === 'products') delete sub.editP;
+  btn.click();
+  setTimeout(() => {
+    const c = $('#content'); if (!c) return;
+    const all = pkCollect(c), same = (a, b) => a.label === b.label && a.sec === b.sec;
+    const hit = all.find(x => same(x, en) && x.item === en.item && (en.vals[0] || '') === (x.vals[0] || '')) || all.find(x => same(x, en) && x.item === en.item) || all.find(x => same(x, en)) || all.find(x => x.label === en.label);
+    if (!hit) { toast('Page opened – use the search bar on the left for the exact setting'); return; }
+    let n = hit.box; while ((n = n.parentElement)) if (n.tagName === 'DETAILS') n.open = true;
+    hit.box.classList.add('pkhl'); hit.box.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    const i = hit.box.querySelector('input:not([type=file]):not([type=hidden]),textarea'); if (i) { try { i.focus({ preventScroll: true }); } catch { /* ignore */ } }
+    toast('👉 Change it here, then press Save');
+    setTimeout(() => hit.box.classList.remove('pkhl'), 7000);
+  }, 160);
+}
+function pkClosePick() { const o = $('#pickOv'); if (o) o.remove(); }
+function openPick() {
+  pkClosePick();
+  const ov = document.createElement('div'); ov.id = 'pickOv'; ov.className = 'pick-ov';
+  ov.innerHTML = '<div class="pick-top"><span>🎯 Tap what you want to change</span><button type="button" class="btn out sm" data-pkx>✕ Close</button></div><iframe title="Customer website" src="/?pick=1&_r=' + Date.now() + '"></iframe>';
+  document.body.appendChild(ov);
+  ov.querySelector('[data-pkx]').onclick = pkClosePick;
+}
+function pkSheet(info, r) {
+  const old = $('#pickRes'); if (old) old.remove();
+  const all = []; const row = (e, tag) => { all.push(e); const v = e.ctl ? e.cur : (e.vals[0] || (e.imgs[0] ? '🖼 photo' : '')); return `<div class="pk-row" role="button" tabindex="0" data-i="${all.length - 1}"><b>${esc(e.item ? e.item + ' › ' : '')}${esc(e.label)}</b><small>${esc(e.tabName)}${e.sec ? ' › ' + esc(e.sec) : ''}</small>${v ? `<em>${esc(String(v).slice(0, 60))}</em>` : ''}</div>`; };
+  const grp = (t, list) => list.length ? `<h4>${t}</h4>${list.map(e => row(e)).join('')}` : '';
+  const shown = info.texts.filter(Boolean)[0] || '';
+  const o = document.createElement('div'); o.id = 'pickRes'; o.className = 'pick-res';
+  o.innerHTML = `<div class="pick-box"><div class="pk-head"><b>🎯 ${esc(PK_KIND[info.kind] || 'Item')} you tapped</b>${shown ? `<span>“${esc(shown.slice(0, 70))}”</span>` : ''}<small>📍 On the website: ${esc(PK_NAME[info.sec] || 'this page')}</small></div>${grp('✏️ Change the words / photo here', r.prim)}${grp('📋 Other settings of the same part (link, colour, show / hide…)', r.near)}${grp('📐 Size, font &amp; style', r.style)}<button type="button" class="btn red sm" data-x>Close</button></div>`;
+  document.body.appendChild(o);
+  o.onkeydown = e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('[data-i]')) { e.preventDefault(); e.target.click(); } };
+  o.onclick = e => { const b = e.target.closest('[data-i]'); if (b) { o.remove(); pkGo(all[+b.dataset.i]); } else if (e.target.closest('[data-x]') || e.target === o) o.remove(); };
+}
+function pkHandle(raw) {
+  const str = a => (Array.isArray(a) ? a : []).filter(x => typeof x === 'string').map(x => x.slice(0, 400)).slice(0, 8);
+  const info = { texts: str(raw.texts), imgs: str(raw.imgs), sec: String(raw.sec || '').slice(0, 40), ctx: String(raw.ctx || '').slice(0, 20), kind: ['button', 'heading', 'text', 'photo'].includes(raw.kind) ? raw.kind : 'text' };
+  let r = null; try { r = pkAnalyze(info); } catch (ex) { console.error(ex); }
+  if (r) return pkSheet(info, r);
+  const k = PK_CTX[info.ctx] || PK_SEC[info.sec];
+  if (k && $(`#side nav [data-tab="${k}"]`)) { $(`#side nav [data-tab="${k}"]`).click(); toast('No exact setting found – opened the closest page. Use the search bar for the rest.'); }
+  else toast('No setting found for that – try the search bar on the left', true);
+}
+window.addEventListener('message', ev => {
+  if (ev.origin !== location.origin || !ev.data || !ev.data.cxpick || !authed) return;
+  const fr = $('#pickOv iframe'); if (!fr || ev.source !== fr.contentWindow) return;
+  pkClosePick(); pkHandle(ev.data.cxpick);
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#pickOv')) pkClosePick(); });
 /* Button A: reload this admin panel's data, same section, no page reload */
 async function refreshAdmin() {
   const b = $('#adminRefresh'); if (!b || b.disabled) return;
@@ -373,12 +530,46 @@ const head = (t, s) => `<h2 class="pt">${t}</h2><p class="ps">${s || ''}</p>`;
 const tabsBar = (id, list, cur) => `<div class="tabs" id="${id}">${list.map(([k, l]) => `<button data-s="${k}" class="${k === cur ? 'on' : ''}">${l}</button>`).join('')}</div>`;
 const saveBar = (label = 'Save changes') => `<div class="savebar"><button class="btn gold" id="saveBtn">💾 ${label}</button><button type="button" class="btn out" data-viewsite>View website</button></div>`;
 async function updateBadge() { try { const d = await api('/reviews', { poll: true }); const b = $('#side [data-tab=reviews]'); if (!b) return; let x = $('.badge', b); if (d.pending) { if (!x) { x = document.createElement('em'); x.className = 'badge'; b.appendChild(x); } x.textContent = d.pending; } else if (x) x.remove(); } catch { /* ignore */ } }
-function render() { updateBadge(); dirty = false; const c = $('#content'); (views[tab] || views.dashboard)(c); }
+let lastNav = null, navPop = false, aSkip = 0, aLayer = 0, aExit = false;
+const navKey = () => tab + '|' + (sub && sub[tab] || '');
+function pageFx(kind) { const c = $('#content'); if (!c) return; c.classList.remove('pg-fwd', 'pg-back'); void c.offsetWidth; c.classList.add(kind); }
+function render() {
+  updateBadge(); dirty = false; const c = $('#content');
+  const k = navKey();
+  if (authed && lastNav !== null && lastNav !== k && !navPop) { try { history.pushState({ cxa: tab, sub: { ...sub } }, '', location.href); } catch { /* ignore */ } pageFx('pg-fwd'); }
+  lastNav = k;
+  (views[tab] || views.dashboard)(c);
+}
+function aSync() {
+  const n = sideOpen && MQ.matches ? 1 : 0;
+  while (aLayer < n) { try { history.pushState({ cxl: 1 }, '', location.href); } catch { break; } aLayer++; }
+  if (aLayer > n) { const d = aLayer - n; aLayer = n; aSkip++; try { history.go(-d); } catch { aSkip--; } }
+}
+function aExitBox(show) {
+  let ov = $('#aExit');
+  if (!ov) { ov = document.createElement('div'); ov.id = 'aExit'; ov.className = 'a-exit'; ov.innerHTML = '<div class="a-exit-bg" data-aex="stay"></div><div class="a-exit-box"><img src="' + esc((C() && C().site && C().site.logo) || DEFAULT_LOGO) + '" alt=""><b style="display:block;margin-top:6px;color:var(--brown)">Classix Home Needs</b><h3>Leave the admin panel?</h3><p>Your unsaved changes (if any) will be lost.</p><div class="row"><button type="button" class="btn gold" data-aex="stay">Stay here</button><button type="button" class="btn out" data-aex="go">Exit</button></div></div>'; document.body.appendChild(ov); void ov.offsetWidth; }
+  aExit = !!show; ov.classList.toggle('open', !!show);
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-aex]'); if (!b) return; if (b.dataset.aex === 'stay') aExitBox(false); else { aExit = false; aSkip = 0; try { history.go(-2); } catch { /* ignore */ } setTimeout(() => aExitBox(false), 700); } });
+function aGuard() {
+  try { const hs = history.state; if (!(hs && (hs.cxa || hs.cxag))) { history.replaceState({ cxag: 1 }, '', location.href); history.pushState({ cxa: tab, sub: {} }, '', location.href); } else history.replaceState({ cxa: tab, sub: {} }, '', location.href); } catch { /* ignore */ }
+  lastNav = navKey();
+}
+addEventListener('popstate', e => {
+  if (!authed) return;
+  if (aSkip > 0) { aSkip--; return; }
+  const st = e.state || {};
+  if (st.cxag) { if (aExit) { aExit = false; try { history.back(); } catch { /* ignore */ } return; } try { history.pushState({ cxa: tab, sub: { ...sub } }, '', location.href); } catch { /* ignore */ } if (sideOpen) setSide(false, false); aLayer = 0; aExitBox(true); return; }
+  if (aExit) aExitBox(false);
+  if (aLayer > 0) { aLayer--; if (sideOpen) { sideOpen = false; setSide(false, false); } return; }
+  if (st.cxa) { tab = st.cxa; sub = st.sub || {}; navPop = true; try { layout(); render(); window.scrollTo(0, 0); pageFx('pg-back'); } finally { navPop = false; } }
+});
 document.addEventListener('input', e => { if (e.target.closest && e.target.closest('#content')) dirty = true; });
 
 const OFFER_F = [
   ['-', '① Basic details'],
   ['active', 'Show this offer on the website', 'bool'],
+  ['topBar', 'Also show this offer in the swipe banner at the very top of the website', 'bool', null, true],
   ['theme', 'Design / colour theme', 'select', [['special', '✨ Special (gold)'], ['diwali', '🪔 Diwali / தீபாவளி'], ['pongal', '🌾 Pongal / பொங்கல்'], ['puthandu', '🌼 Tamil New Year'], ['christmas', '🎄 Christmas'], ['eid', '🌙 Ramzan / Eid'], ['newyear', '🎆 New Year'], ['sale', '🏷️ Sale (red)'], ['wholesale', '📦 Wholesale (blue)'], ['new', '🆕 New arrivals (green)'], ['gift', '🎁 Gifts (pink)']]],
   ['badge', 'Badge text (e.g. NEW, LIMITED)'],
   ['titleTa', 'Title – Tamil / தமிழ்'], ['titleEn', 'Title – English'],
@@ -399,7 +590,27 @@ const OFFER_F = [
   ['termsTa', 'Terms & conditions – Tamil (one line each)', 'lines'], ['termsEn', 'Terms & conditions – English (one line each)', 'lines'],
   ['wa', 'Show the WhatsApp enquiry button', 'bool'],
   ['ctaTa', 'Extra button text – Tamil'], ['ctaEn', 'Extra button text – English'],
-  ['link', 'Extra button link (optional)', 'text', '#products  #rw  #contact  #gallery  or https://…']];
+  ['link', 'Extra button link (optional)', 'text', '#products  #rw  #contact  #gallery  or https://…'],
+  ['-', '⑦ Top swipe banner – make it attractive (every part can be edited, and switched on / off)'],
+  ['bnBadgeOn', 'Show the badge (the small glowing tag – text is "Badge text" in ① above)', 'bool', null, true],
+  ['bnTitleOn', 'Show the title', 'bool', null, true],
+  ['bnTitleTa', 'Banner title – Tamil (empty = same as the offer title)'], ['bnTitleEn', 'Banner title – English (empty = same as the offer title)'],
+  ['bnTagOn', 'Show the short line under the title', 'bool', null, true],
+  ['bnTagTa', 'Banner short line – Tamil (empty = same as ①)', 'area'], ['bnTagEn', 'Banner short line – English (empty = same as ①)', 'area'],
+  ['bnPriceOn', 'Show the special price (and the struck-out regular price)', 'bool', null, true],
+  ['bnPctOn', 'Show the "% OFF" sticker', 'bool', null, true],
+  ['bnTimerOn', 'Show the live countdown (days and hh:mm:ss)', 'bool', null, true],
+  ['bnImgOn', 'Show the offer picture (round, glowing) – uses the main picture from ⑤', 'bool', null, true],
+  ['bnEmojiOn', 'Show the big emoji when there is no picture', 'bool', null, true],
+  ['bnEmoji', 'Banner emoji (empty = the theme emoji). Example: 🎁 🔥 🛍️'],
+  ['bnFx', 'Moving effect behind the text', 'select', [['confetti', '🎈 Floating emojis (confetti)'], ['party', '🎉 Party mix (emoji + sparkles)'], ['sparkle', '✨ Twinkling stars'], ['none', 'No effect']], 'confetti'],
+  ['bnCustom', 'Use my own banner colours (instead of the theme colours)', 'bool'],
+  ['bnC1', 'Banner colour 1 (edges)', 'color', '#7c2d12'], ['bnC2', 'Banner colour 2 (middle glow)', 'color', '#f59e0b'],
+  ['bnBtnOn', 'Show the button on this banner', 'bool', null, true],
+  ['bnBtnTa', 'Button text – Tamil (empty = the default text in Offers Banner Studio)'], ['bnBtnEn', 'Button text – English (empty = the default text)'],
+  ['bnBtnIcon', 'Arrow / icon after the button text (empty = ›, type none to hide). Example: → 🔥 👉'],
+  ['bnBtnStyle', 'Button colour', 'select', [['white', 'White'], ['gold', 'Gold'], ['green', 'Green'], ['red', 'Red'], ['dark', 'Dark brown']], 'white'],
+  ['bnBtnGo', 'When the customer taps the button', 'select', [['offer', 'Open this offer page'], ['wa', 'Open WhatsApp enquiry for this offer']], 'offer']];
 const WHY_F = [['icon', 'Icon (emoji)'], ['titleTa', 'Title – Tamil / தமிழ்'], ['titleEn', 'Title – English'], ['textTa', 'Text – Tamil'], ['textEn', 'Text – English']];
 const STAT_F = [['value', 'Number (e.g. 7+, 1000+)'], ['ta', 'Label – Tamil / தமிழ்'], ['en', 'Label – English']];
 const STRIP_F = [['ta', 'Text – Tamil / தமிழ்'], ['en', 'Text – English']];
@@ -435,10 +646,12 @@ async function cloudCard(c) {
       ? `<p class="ps"><b>⚠️ Cloud storage is OFF.</b> On a free host (e.g. Render) photos and settings can disappear when the server restarts. Connect Supabase: add <code>SUPABASE_URL</code> and <code>SUPABASE_SERVICE_KEY</code> in your host's environment settings (steps are in <b>SUPABASE-SETUP.md</b>), then redeploy.</p>`
       : `<p class="ps"><b>${j.connected ? '✅ Connected to Supabase' : '⚠️ Not connected right now'}</b> (${esc(j.host)} / ${esc(j.bucket)})<br>Files protected: <b>${j.synced}</b> · Last saved to cloud: <b>${ago(j.lastSync)}</b></p>${storageBlock(j)}<p class="ps">${j.pending ? ' · waiting: ' + j.pending : ''}${j.restored ? '<br>Restored ' + j.restored + ' file(s) from the cloud when the server last started.' : ''}${j.lastError ? '<br><span style="color:#b3261e">Last problem: ' + esc(j.lastError) + '</span>' : ''}</p><button type="button" class="btn out sm" id="cloudSync">↻ Save to cloud now</button>`;
     const on = ka.enabled !== false;
-    box.innerHTML = storageWarn(j) + cloud + `<p class="ps" style="margin-top:10px"><b>${on ? '✅ Keep-awake is ON.' : '⏸ Keep-awake is OFF.'}</b> ${on ? 'The server visits its own address every <b>${ka.minutes || 8} minutes</b> so a free host does not put it to sleep.' : 'A free host may sleep after 15 minutes without visitors (first visit then takes 30–60 seconds).'}${ka.url ? '<br>Address: ' + esc(ka.url) : '<br>Address will be learned from the first visitor.'} · Successful visits: <b>${ka.ok || 0}</b>${ka.failed ? ' · failed: ' + ka.failed : ''}</p><div class="row" style="align-items:center;gap:8px;margin:6px 0"><label for="kaMin">Visit every</label><input type="number" id="kaMin" min="1" max="14" value="${ka.minutes || 8}" style="width:70px"><span>minutes (1–14)</span><button type="button" class="btn out sm" id="kaSave">Save</button></div><button type="button" class="btn ${on ? 'out' : 'gold'} sm" id="kaToggle">${on ? '⏸ Turn Keep-awake OFF' : '▶ Turn Keep-awake ON'}</button>`;
+    box.innerHTML = storageWarn(j) + cloud + `<p class="ps" style="margin-top:10px"><b>${on ? '✅ Keep-awake is ON.' : '⏸ Keep-awake is OFF.'}</b> ${on ? 'The server visits its own address every <b>' + (ka.minutes || 8) + ' minutes</b> so a free host does not put it to sleep.' : 'A free host may sleep after 15 minutes without visitors (first visit then takes 30–60 seconds).'}${ka.url ? '<br>Address: ' + esc(ka.url) : '<br>Address will be learned from the first visitor.'} · Successful visits: <b>${ka.ok || 0}</b>${ka.failed ? ' · failed: ' + ka.failed : ''} <button type="button" class="btn out sm" id="kaReset" style="margin-left:6px">↺ Reset counter to 0</button></p><div class="row" style="align-items:center;gap:8px;margin:6px 0"><label for="kaMin">Visit every</label><input type="number" id="kaMin" min="1" max="14" value="${ka.minutes || 8}" style="width:70px"><span>minutes (1–14)</span><button type="button" class="btn out sm" id="kaSave">Save</button></div><button type="button" class="btn ${on ? 'out' : 'gold'} sm" id="kaToggle">${on ? '⏸ Turn Keep-awake OFF' : '▶ Turn Keep-awake ON'}</button>`;
   };
   try { draw(await api('/cloud/status')); } catch { box.innerHTML = '<p class="ps">Could not read the status. Try again later.</p>'; return; }
   box.onclick = async e => {
+    const rs = e.target.closest('#kaReset');
+    if (rs) { if (!confirm('Set the “Successful visits” counter back to 0?')) return; rs.disabled = true; try { draw(await api('/keepawake/reset', { method: 'POST', body: {} })); toast('Counter reset to 0 ✓'); } catch { rs.disabled = false; toast('Could not reset the counter', true); } return; }
     const sv = e.target.closest('#kaSave');
     if (sv) { const m = Math.round(Number($('#kaMin', box).value)); if (!(m >= 1 && m <= 14)) { toast('Enter a number from 1 to 14'); return; } sv.disabled = true; try { draw(await api('/keepawake', { method: 'POST', body: { minutes: m } })); toast('Keep-awake: every ' + m + ' min ✓'); } catch { sv.disabled = false; toast('Could not save'); } return; }
     const t = e.target.closest('#kaToggle');
@@ -554,16 +767,145 @@ const views = {
       onTop(el, { syncs, lists, draw }) { $$('[data-tpl]', el).forEach(b => b.onclick = () => { const l = lists[0], cur = syncs.offers(); cur.unshift({ v7: true, id: '', active: true, startDate: '', endDate: '', timer: true, wa: true, ctaTa: '', ctaEn: '', link: '', items: [], photos: [], termsTa: [], termsEn: [], addedAt: Date.now(), ...TPL[b.dataset.tpl] }); l.items.splice(0, l.items.length, ...cur); draw(l); toast('Offer added at the top – fill in the details, then press Save'); const first = $('[data-list=offers] > .item', el); if (first) { first.classList.add('fresh'); first.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }); } });
   },
   stats(c) {
-    c.innerHTML = head('Visitor Stats', 'How many people are visiting your website. Updates automatically every few seconds.') + `<div class="kpis vk" id="sk"><div class="empty">Loading…</div></div><div class="card"><h3>Last 14 days</h3><div id="bars"></div><p class="ps" style="margin-top:8px">A visitor is counted once per day per phone/computer. “Page views” counts every time the website is opened. Numbers come from real visits stored on your server.</p></div>`;
-    const load = async () => { try { const s = await api('/stats', { poll: true }); const sk = $('#sk', c); if (!sk) return; sk.innerHTML = s.total.views ? visitorCards(s, true) : emptyStats(); $('#bars', c).innerHTML = s.total.views ? barsHtml(s.days) : '<div class="empty">The chart will appear after the first visit.</div>'; } catch (ex) { /* ignore */ } };
-    load(); const iv = setInterval(() => { if (!document.body.contains(c) || tab !== 'stats') return clearInterval(iv); load(); }, 8000);
+    const LS = 'cx_stats_ui';
+    const W = [['kpi', 'Summary numbers'], ['chart', 'Day-by-day chart'], ['newret', 'New vs returning visitors'], ['dev', 'Phone / computer (device)'], ['br', 'Browser'], ['src', 'Where visitors came from'], ['secs', 'Website sections viewed'], ['prod', 'Top products'], ['off', 'Top offers'], ['gal', 'Top gallery photos']];
+    const RANGES = [['today', 'Today'], ['yesterday', 'Yesterday'], ['7', '7 days'], ['14', '14 days'], ['30', '30 days'], ['90', '90 days'], ['month', 'This month'], ['all', 'All time'], ['custom', '📅 Pick dates']];
+    let ui = { range: '7', from: '', to: '', cmp: true, view: 'graph', hide: {} };
+    try { const j = JSON.parse(localStorage.getItem(LS) || '{}'); if (j && typeof j === 'object') ui = { ...ui, ...j, hide: j.hide || {} }; } catch { /* default */ }
+    const save = () => { try { localStorage.setItem(LS, JSON.stringify(ui)); } catch { /* ignore */ } };
+    const fd = k => k ? new Date(k + 'T00:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '';
+    const dr = (a, b) => fd(a) + (a !== b ? ' – ' + fd(b) : '');
+    let R = null;
+    c.innerHTML = head('Visitor Stats', 'See how many people visit, what they open and where they come from. Choose any dates you like. Updates automatically.') + `
+<div class="card" id="stCtl">
+  <h3>📅 Choose what to look at</h3>
+  <div class="rng" id="stRng">${RANGES.map(([k, l]) => `<button type="button" class="chip" data-rng="${k}">${l}</button>`).join('')}</div>
+  <div class="rng viewsw" id="stView"><span class="vl">Show as:</span><button type="button" class="chip" data-view="graph">📊 Graph view</button><button type="button" class="chip" data-view="list">📋 List view</button></div>
+  <div class="sdates" id="stDates">
+    <label>From <input type="date" id="stFrom"></label><label>To <input type="date" id="stTo"></label><button type="button" class="btn sm" id="stGo">Show</button>
+    <label class="one">Or see one day <input type="date" id="stDay"></label>
+  </div>
+  <label class="cmp"><input type="checkbox" id="stCmp"> Compare with the period before (▲ more / ▼ less)</label>
+  <details class="cust"><summary>⚙️ Customize this page (choose what to show)</summary>
+    <div class="cgrid">${W.map(([k, l]) => `<label><input type="checkbox" data-w="${k}"> ${l}</label>`).join('')}</div>
+  </details>
+</div>
+<div id="stBody"><div class="empty">Loading…</div></div>
+<div class="card" id="stDel">
+  <h3>🗑️ Delete visitor data</h3>
+  <p class="ps" style="margin-bottom:10px" id="stSince"></p>
+  <div class="delrow"><label>One day <input type="date" id="dDay"></label><button type="button" class="btn out sm" data-del="day">Delete that day</button></div>
+  <div class="delrow"><label>Everything before <input type="date" id="dBefore"></label><button type="button" class="btn out sm" data-del="before">Delete older data</button></div>
+  <div class="delrow"><span id="dRangeTxt" class="ps"></span><button type="button" class="btn out sm" data-del="range">Delete the dates shown above</button></div>
+  <div class="delrow"><span class="ps">Start again from zero – removes every visit, count and chart.</span><button type="button" class="btn sm dng" data-del="all">⚠️ Delete ALL and start fresh</button></div>
+  <p class="ps" style="margin-top:8px">Deleted data cannot be brought back. Your products, offers and settings are not touched.</p>
+</div>`;
+    const body = $('#stBody', c);
+    const icoDev = { Android: '🤖', iPhone: '📱', iPad: '📲', Windows: '🪟', Mac: '🍎', Linux: '🐧', Chromebook: '💻', Other: '❔' };
+    const SECN = { stats: 'Number counters', strips: 'Highlights strip', categories: 'Categories', products: 'Products', rw: 'Retail & Wholesale', offers: 'Offers', why: 'Why choose us', gallery: 'Gallery', about: 'About', testimonials: 'Customer reviews', contact: 'Contact', cta: 'Call to action', 'whatsapp-group': 'WhatsApp group' };
+    const rows = (list, o = {}) => {
+      if (!list || !list.length) return '<div class="empty" style="padding:14px">Nothing recorded for these dates yet.</div>';
+      const tot = o.total || list.reduce((a, x) => a + x.n, 0) || 1, mx = Math.max(...list.map(x => x.n));
+      return '<div class="brk">' + list.map(x => `<div class="br"><div class="bn">${o.icon ? (o.icon[x.name] || '') + ' ' : ''}${esc(o.name ? o.name(x) : x.name)}</div><div class="bt"><i style="width:${Math.max(2, Math.round(x.n / mx * 100))}%"></i></div><div class="bv"><b>${nf(x.n)}</b> <small>${Math.round(x.n / tot * 100)}%</small></div></div>`).join('') + '</div>';
+    };
+    const PAL = ['#c8902e', '#3b2414', '#2e7d32', '#1565c0', '#c2185b', '#6a1b9a', '#00838f', '#ef6c00', '#7b8a2f'];
+    const donut = (list, o = {}) => {
+      if (!list || !list.length) return '<div class="empty" style="padding:14px">Nothing recorded for these dates yet.</div>';
+      let L = list.slice(0, 8); const rest = list.slice(8).reduce((a, x) => a + x.n, 0); if (rest) L = L.concat([{ name: 'Other', n: rest }]);
+      const tot = o.total || L.reduce((a, x) => a + x.n, 0) || 1; let acc = 0;
+      const seg = L.map((x, i) => { const p = x.n / tot * 100, el = `<circle cx="21" cy="21" r="15.9155" fill="none" stroke="${PAL[i % PAL.length]}" stroke-width="6" stroke-dasharray="${p.toFixed(3)} ${(100 - p).toFixed(3)}" stroke-dashoffset="${(25 - acc).toFixed(3)}"><title>${esc(o.name ? o.name(x) : x.name)}: ${x.n}</title></circle>`; acc += p; return el; }).join('');
+      return `<div class="donut"><svg viewBox="0 0 42 42" role="img" aria-label="Chart"><circle cx="21" cy="21" r="15.9155" fill="none" stroke="#f1e7d6" stroke-width="6"/>${seg}<text x="21" y="22.5" text-anchor="middle" font-size="6" font-weight="700" fill="#3b2414">${nf(tot)}</text></svg><div class="dleg">${L.map((x, i) => `<div><i style="background:${PAL[i % PAL.length]}"></i><span>${o.icon && o.icon[x.name] ? o.icon[x.name] + ' ' : ''}${esc(o.name ? o.name(x) : x.name)}</span><b>${nf(x.n)}</b> <small>${Math.round(x.n / tot * 100)}%</small></div>`).join('')}</div></div>`;
+    };
+    const view = (list, o = {}) => ui.view === 'graph' ? donut(list, o) : rows(list, o);
+    const lineChart = s => {
+      const W = 640, H = 230, L = 38, Rr = 12, T = 14, B = 34, n = s.length, mx = Math.max(1, ...s.map(d => Math.max(d.visitors, d.views))), nice = Math.max(4, Math.ceil(mx / 4) * 4), pw = W - L - Rr, ph = H - T - B;
+      const X = i => L + (n === 1 ? pw / 2 : i * pw / (n - 1)), Y = v => T + ph - v / nice * ph, step = Math.ceil(n / 8);
+      const grid = [0, 1, 2, 3, 4].map(g => { const v = nice / 4 * g; return `<line x1="${L}" x2="${W - Rr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#eadfce"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="#8a7461">${Math.round(v)}</text>`; }).join('');
+      const xl = s.map((d, i) => i % step === 0 || (i === n - 1 && (n - 1) % step > step / 2) ? `<text x="${X(i)}" y="${H - 12}" text-anchor="middle" font-size="11" fill="#8a7461">${esc(d.date.slice(8))}/${esc(d.date.slice(5, 7))}</text>` : '').join('');
+      const line = (key, col, dash) => `<polyline fill="none" stroke="${col}" stroke-width="2.5" ${dash ? 'stroke-dasharray="6 4"' : ''} stroke-linejoin="round" points="${s.map((d, i) => X(i) + ',' + Y(d[key])).join(' ')}"/>`;
+      const pts = s.map((d, i) => `<g data-bar="${esc(d.date)}" style="cursor:pointer"><circle cx="${X(i)}" cy="${Y(d.visitors)}" r="${n > 45 ? 3 : 5}" fill="#c8902e"/><circle cx="${X(i)}" cy="${Y(d.views)}" r="${n > 45 ? 2.5 : 4}" fill="#3b2414"/><rect x="${X(i) - pw / Math.max(1, n) / 2}" y="${T}" width="${Math.max(10, pw / Math.max(1, n))}" height="${ph}" fill="transparent"><title>${esc(fd(d.date))}: ${d.visitors} visitors, ${d.views} page views (tap to open this day)</title></rect></g>`).join('');
+      return `<div class="lgd"><span><i style="background:#c8902e"></i> Visitors</span><span><i style="background:#3b2414"></i> Page views</span></div><svg class="line" viewBox="0 0 ${W} ${H}" role="img" aria-label="Visitors and page views for each day">${grid}${xl}${line('views', '#3b2414', true)}${line('visitors', '#c8902e')}${pts}</svg>`;
+    };
+    const box = (key, title, inner, note) => ui.hide[key] ? '' : `<div class="card sbox"><h3>${title}</h3>${inner}${note ? `<p class="ps" style="margin-top:8px">${note}</p>` : ''}</div>`;
+    const delta = (cur, prev) => {
+      if (!ui.cmp || ui.range === 'all' || !R) return '';
+      if (!prev) return cur > 0 ? '<span class="dl up">▲ new</span>' : '';
+      const p = Math.round((cur - prev) / prev * 100); if (p === 0) return '<span class="dl">● same as before</span>';
+      return `<span class="dl ${p > 0 ? 'up' : 'dn'}">${p > 0 ? '▲' : '▼'} ${Math.abs(p)}%</span> <small>(was ${nf(prev)})</small>`;
+    };
+    const barChart = s => {
+      const n = s.length, mx = Math.max(1, ...s.map(d => d.visitors)), step = Math.ceil(n / 12);
+      return `<div class="bars${n > 16 ? ' dense' : ''}${n > 45 ? ' vdense' : ''}">${s.map((d, i) => `<div class="bar" data-bar="${esc(d.date)}" title="${esc(fd(d.date))}: ${d.visitors} visitors, ${d.views} page views (tap to open this day)"><i style="height:${Math.max(3, Math.round(d.visitors / mx * 100))}%"></i><b>${d.visitors}</b><span>${i % step === 0 || n <= 16 ? esc(d.date.slice(8)) + '/' + esc(d.date.slice(5, 7)) : '&nbsp;'}</span></div>`).join('')}</div>`;
+    };
+    function draw() {
+      if (!R) return;
+      const cu = R.cur, pv = R.prev, one = R.len === 1, label = dr(R.from, R.to) + (R.len > 1 ? ` · ${R.len} days` : '');
+      $$('#stRng .chip', c).forEach(b => b.classList.toggle('on', b.dataset.rng === ui.range));
+      $('#stDates', c).style.display = ui.range === 'custom' ? '' : 'none';
+      $('#stFrom', c).value = R.from; $('#stTo', c).value = R.to; $('#stFrom', c).max = $('#stTo', c).max = $('#stDay', c).max = R.today;
+      $('#stCmp', c).checked = !!ui.cmp;
+      $$('[data-w]', c).forEach(i => i.checked = !ui.hide[i.dataset.w]);
+      $$('#stView .chip', c).forEach(b => b.classList.toggle('on', b.dataset.view === ui.view));
+      $('#dRangeTxt', c).textContent = 'Shown now: ' + dr(R.from, R.to);
+      $('#stSince', c).innerHTML = R.firstDay ? `Visits are stored from <b>${fd(R.since || R.firstDay)}</b> · ${R.storedDays} day${R.storedDays === 1 ? '' : 's'} saved · all-time: <b>${nf(R.total.visitors)}</b> visitors, <b>${nf(R.total.views)}</b> page views.` : 'No data is stored right now (fresh start).';
+      const k = (l, v, sub, cls = '') => `<div class="kpi ${cls}" style="cursor:default"><b>${nf(v)}</b><span>${l}</span>${sub ? `<small class="ksub">${sub}</small>` : ''}</div>`;
+      let h = `<h3 class="rngh">${esc(label)}${R.from === R.today && R.to === R.today ? ' <small>(today)</small>' : ''}</h3>`;
+      if (!ui.hide.kpi) h += `<div class="kpis vk">${k('🟢 Online right now', R.live, 'visitors on the website', 'live')}${k('👥 Visitors', cu.visitors, delta(cu.visitors, pv.visitors))}${k('📄 Page views', cu.views, delta(cu.views, pv.views))}${k('🆕 New visitors', cu.nw, delta(cu.nw, pv.nw))}${k('🔁 Returning visitors', cu.rt, delta(cu.rt, pv.rt))}${k('📊 Pages per visitor', cu.visitors ? Math.round(cu.views / cu.visitors * 10) / 10 : 0, one ? '' : 'Average: ' + (R.len ? Math.round(cu.visitors / R.len * 10) / 10 : 0) + ' visitors a day')}</div>`;
+      if (!cu.views && !R.total.views) h += '<div class="empty">📭 <b>No visits recorded yet.</b><br>Numbers appear here as soon as customers open your website.</div>';
+      if (!one) h += box('chart', '📈 Visitors each day', ui.view === 'graph' ? lineChart(R.series) : barChart(R.series), 'Tap any point or bar to see that single day. A visitor is counted once per day per phone / computer.');
+      const nt = cu.nw + cu.rt;
+      h += '<div class="g2">';
+      h += box('newret', '🆕 New vs returning', view([{ name: 'New visitors', n: cu.nw }, { name: 'Returning visitors', n: cu.rt }].filter(x => nt), { total: nt }), 'Returning = the same phone / computer was seen on an earlier day.');
+      const dv = R.dev, ph = dv.filter(x => /^(Android|iPhone)$/.test(x.name)).reduce((a, x) => a + x.n, 0), tb = dv.filter(x => x.name === 'iPad').reduce((a, x) => a + x.n, 0), cm = dv.filter(x => /^(Windows|Mac|Linux|Chromebook)$/.test(x.name)).reduce((a, x) => a + x.n, 0), dt = dv.reduce((a, x) => a + x.n, 0);
+      h += box('dev', '📱 Phone / computer', (dt ? `<p class="ps" style="margin-bottom:8px">📱 Phones <b>${nf(ph)}</b> · 📲 Tablets <b>${nf(tb)}</b> · 💻 Computers <b>${nf(cm)}</b></p>` : '') + view(dv, { icon: icoDev }), 'Only visits after this version was installed are counted here.');
+      h += box('br', '🌐 Browser', view(R.br));
+      h += box('src', '🔗 Where they came from', view(R.src), '“Direct / WhatsApp / typed” = no website was recorded (opened from WhatsApp, a saved link or typed). Tip: add <code>?src=poster</code> to a link or QR code to see it here as “Link: poster”.');
+      h += box('secs', '🧭 Website sections viewed', view(R.secs, { name: x => SECN[x.name] || x.name }), 'Counted once per visit when the section is on screen.');
+      h += box('prod', '📦 Top products opened', view(R.items.p), 'Counted once per visitor visit.');
+      h += box('off', '🏷️ Top offers opened', view(R.items.o));
+      h += box('gal', '🖼️ Top gallery photos opened', view(R.items.g));
+      h += '</div>';
+      body.innerHTML = h;
+    }
+    async function load(poll) {
+      const b = { range: ui.range }; if (ui.range === 'custom') { b.from = ui.from; b.to = ui.to; }
+      try { R = await api('/stats/report', { method: 'POST', body: b, poll: !!poll }); draw(); } catch (e) { if (!poll) body.innerHTML = '<div class="empty">Could not load statistics. ' + esc(e.message || '') + '</div>'; }
+    }
+    const setRange = (r, from, to) => { ui.range = r; if (from) { ui.from = from; ui.to = to || from; } save(); load(); };
+    c.addEventListener('click', e => {
+      const r = e.target.closest('[data-rng]'); if (r) { if (r.dataset.rng === 'custom') { ui.range = 'custom'; if (R && !ui.from) { ui.from = R.from; ui.to = R.to; } save(); load(); } else setRange(r.dataset.rng); return; }
+      const vw = e.target.closest('[data-view]'); if (vw) { ui.view = vw.dataset.view; save(); draw(); return; }
+      const bar = e.target.closest('[data-bar]'); if (bar) { setRange('custom', bar.dataset.bar, bar.dataset.bar); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+      if (e.target.id === 'stGo') { const f = $('#stFrom', c).value, t = $('#stTo', c).value; if (!f || !t) { toast('Choose both dates'); return; } setRange('custom', f <= t ? f : t, f <= t ? t : f); return; }
+      const d = e.target.closest('[data-del]'); if (d) doDelete(d.dataset.del);
+    });
+    c.addEventListener('change', async e => {
+      const t = e.target;
+      if (t.id === 'stDay' && t.value) { setRange('custom', t.value, t.value); t.value = ''; return; }
+      if (t.id === 'stCmp') { ui.cmp = t.checked; save(); draw(); return; }
+      if (t.dataset && t.dataset.w) { ui.hide[t.dataset.w] = !t.checked; save(); draw(); return; }
+      return;
+    });
+    async function doDelete(mode) {
+      let b = { mode }, msg = '';
+      if (mode === 'day') { const v = $('#dDay', c).value; if (!v) { toast('Choose the day first'); return; } b.date = v; msg = 'Delete all visitor data of ' + fd(v) + '?'; }
+      else if (mode === 'before') { const v = $('#dBefore', c).value; if (!v) { toast('Choose the date first'); return; } b.date = v; msg = 'Delete ALL visitor data before ' + fd(v) + ' (that day is kept)?'; }
+      else if (mode === 'range') { if (!R) return; b.from = R.from; b.to = R.to; msg = 'Delete all visitor data for ' + dr(R.from, R.to) + '?'; }
+      else { msg = 'Delete ALL visitor data and start fresh from zero?'; }
+      if (!confirm(msg + '\n\nThis cannot be undone.')) return;
+      if (mode === 'all' && !confirm('Are you sure? Every visit, chart and total will become 0.')) return;
+      try { await api('/stats/delete', { method: 'POST', body: b }); toast('Deleted ✓'); await load(); } catch (e) { toast(e.message || 'Could not delete'); }
+    }
+    load();
+    const iv = setInterval(() => { if (!document.body.contains(c) || tab !== 'stats') return clearInterval(iv); if (R && R.to === R.today && !document.activeElement.matches('input')) load(true); }, 15000);
   },
   chrome(c) {
-    formPage(c, 'Header & Footer', 'Everything at the very top and very bottom of the customer website: announcement bar, header, footer, “Website created by” credit and the title shown on Google.', [{ group: 'site', fields: [
+    formPage(c, 'Header & Footer', 'Everything at the very top and very bottom of the customer website: announcement bar, header, footer, “Website created by” credit and the title shown on Google. To change the SIZE of the shop name, logo, language button and menu button, open Display & Sizes → Header.', [{ group: 'site', fields: [
       ['-', 'Top announcement bar (leave both boxes empty to hide it)'], ['announcementTa', 'Announcement – Tamil / தமிழ்'], ['announcement', 'Announcement – English'],
-      ['-', 'Header'], ['estShow', 'Show “EST. year” above the shop name (computers)', 'bool', '', true], ['estLabel', 'Text before the year (default: EST.)'], ['callPill', 'Show the phone-number button in the header (computers)', 'bool', '', true], ['langBtn', 'Show the Tamil / English language switch', 'bool', '', true],
+      ['-', 'Header'], ['estShow', 'Show “EST. year” above the shop name (computers)', 'bool', '', true], ['callPill', 'Show the phone-number button in the header (computers)', 'bool', '', true], ['langBtn', 'Show the Tamil / English language switch', 'bool', '', true], ['uiHdrLayout', 'Header layout on computers, laptops and tablets', 'select', [['split', 'Logo in the left corner, shop name in the centre'], ['together', 'Logo and shop name together in the centre']]],
       ['-', 'Footer'], ...pairs(['footerText', 'Footer text']), ['copyright', 'Copyright text'], ['footerShowGst', 'Show GSTIN in the footer (set it in Store Settings)', 'bool', '', false],
       ['-', '“Website created by” credit'], ['creatorShow', 'Show the credit line', 'bool', '', true], ['creatorLabelTa', 'Wording – Tamil / தமிழ் (optional)'], ['creatorLabelEn', 'Wording – English', 'text', 'Default: Website created by'], ['creatorName', 'Creator name'], ['creatorPhone', 'Creator mobile (visitors can tap to call)'], ['creatorLink', 'Creator website link (optional)', 'text', 'https://…'],
+      ['-', '“Leave the website?” box (shown when a visitor presses Back on the first page)'], ['exitLogoOn', 'Show the logo in this box', 'bool', '', true], ['exitLogo', 'Logo for this box (empty = the shop logo)', 'img'], ['exitLogoSize', 'Logo height (px)', 'num', 'Leave empty = automatic'], ['exitNameOn', 'Show the shop name in this box (the name comes from Store Settings automatically)', 'bool', '', true], ...pairs(['exitTitle', 'Question / title'], ['exitText', 'Message under the title'], ['exitStay', '“Stay” button'], ['exitGo', '“Exit” button'], ['exitHint', 'Small hint at the bottom']),
       ['-', 'How the website appears on Google and in the browser tab'], ['seoTitle', 'Page title', 'text', 'Leave empty to use the shop name automatically'], ['seoDesc', 'Short description', 'area', 'Leave empty to build it from your tagline']] }]);
   },
   typography(c) {
@@ -635,9 +977,11 @@ const views = {
       ['Customer reviews', ['reviewsTitle', 'writeReview', 'rvFormTitle', 'rvYourName', 'rvYourRating', 'rvYourText', 'rvSend', 'rvThanksPending', 'rvThanksLive', 'rvErrName', 'rvErrRating', 'rvErrText', 'rvErrLinks', 'rvErrLimit', 'rvErr', 'rvShopReply', 'rvMore', 'rvNone', 'rvCount', 'rvCount1']],
       ['Offers, gallery & reviews pages', ['viewAllOffers', 'offersAllTitle', 'totalOffers', 'productsIncluded', 'offerWhat', 'offerTotalProducts', 'specialPrice', 'totalLbl', 'closeBtn', 'seeMoreImg', 'totalImages', 'galAllTitle', 'seeAllReviews', 'totalReviews', 'rvAllTitle', 'productsWord']],
       ['New offer cards & offer page', ['of_view','of_items','of_inc','of_price','of_save','of_ends','of_d','of_h','of_m','of_s','of_from','of_till','of_terms','of_more','of_photos','of_enq','of_ended','of_soon']],
+      ['“Leave the website?” box (visitor presses Back)', ['exitTitle', 'exitText', 'exitStay', 'exitGo', 'exitHint']],
+      ['Products page', ['prodAllTitle', 'totalProducts', 'offerTap']],
       ['Other texts', ['photosSoon', 'emailLbl', 'rvAvg', 'backWeb', 'pdfLbl']]
     ];
-    const NAME = { of_view: 'Offer card button', of_items: 'Word “items”', of_inc: 'Offer page: “What\'s inside” heading', of_price: 'Offer page: special price label', of_save: 'Offer page: “You save”', of_ends: 'Offer page: countdown title', of_d: 'Countdown: days', of_h: 'Countdown: hours', of_m: 'Countdown: minutes', of_s: 'Countdown: seconds', of_from: 'Offer starts label', of_till: 'Offer ends label', of_terms: 'Terms heading', of_more: 'Offer details heading', of_photos: 'Offer photos heading', of_enq: 'Offer WhatsApp button', of_ended: 'Offer ended message', of_soon: 'Offer starting soon message', rvAvg: 'Reviews: average label', backWeb: 'Back to website button', pdfLbl: 'PDF label', viewAllOffers: '“View All Offers” button', offersAllTitle: 'All Offers page title', totalOffers: '“Total Offers” label', productsIncluded: 'Offer card: products included – use {n}', offerWhat: 'Offer page: list heading', offerTotalProducts: 'Offer page: total products', specialPrice: 'Special price label', totalLbl: '“Total” (price label)', closeBtn: 'Close button', seeMoreImg: '“See More Images” button', totalImages: '“Total Images” label', galAllTitle: 'All images page title', seeAllReviews: '“See All Reviews” button', totalReviews: '“Total Reviews” label', rvAllTitle: 'All reviews page title', productsWord: '“Products” word', call: 'Call button', wa: 'WhatsApp button', visit: 'Visit store button', details: 'Product “details” button', enquire: 'Product “enquire” button', viewProducts: '“View all products” button', retailBtn: 'Retail products button', whBtn: 'Wholesale enquiry button', directions: 'Directions button', send: 'Send enquiry button', viewOffer: 'Offer “view details” button', all: '“All” filter', all2: '“All offers”', search: 'Search box hint', notFound: 'No products found', retail: 'Retail tag', wholesale: 'Wholesale tag', retailAv: 'Available in retail', wholesaleAv: 'Available in wholesale', askPrice: 'Price not set', oos: 'Out of stock', enqTitle: 'Enquiry window title', sendEnq: 'Enquiry form title', general: '“General” enquiry type', name: 'Name box', phone: 'Mobile box', msg: 'Message box', quick: 'Footer “Quick links”', hours: 'Store timings heading', address: 'Address heading', ctaT: 'Banner title', ctaS: 'Banner text', eyCat: 'Above Categories', eyProd: 'Above Products', eyRw: 'Above Retail & Wholesale', eyOffers: 'Above Offers', eyWhy: 'Above Why choose us', eyGal: 'Above Gallery', eyContact: 'Above Contact', eyReviews: 'Above Reviews', reviewsTitle: 'Reviews section title', photosSoon: 'Empty gallery message', emailLbl: 'Email heading (contact)', backBtn: 'Back button (offer page)', lastDay: 'Offer: last day', daysLeft: 'Offer: days left – use {n} for the number', dayLeft: 'Offer: 1 day left – use {n} for the number', offerEnded: 'Offer: ended notice', offerPrice: 'Offer: “Offer price”', youSave: 'Offer: “You save”', offerCount: 'Offer: number of products', offerNow: 'Offer: starts now', offerOngoing: 'Offer: no end date', offerPeriod: 'Offer: “Offer period”', offerList: 'Offer: products heading', offerIncl: 'Offer: “What’s included”', offerDetails: 'Offer: “Offer details”', enqOffer: 'Offer: enquire button', errName: 'Enquiry form: name missing', errPhone: 'Enquiry form: bad mobile number', waOpening: 'Message when WhatsApp opens', writeReview: 'Write-a-review button', rvFormTitle: 'Review window title', rvYourName: 'Review: name box', rvYourRating: 'Review: rating heading', rvYourText: 'Review: text box', rvSend: 'Review: submit button', rvThanksPending: 'Review: thanks (waits for approval)', rvThanksLive: 'Review: thanks (published at once)', rvErrName: 'Review: name missing', rvErrRating: 'Review: rating missing', rvErrText: 'Review: text too short', rvErrLinks: 'Review: links not allowed', rvErrLimit: 'Review: too many sent', rvErr: 'Review: could not send', rvShopReply: 'Review: “Reply from the shop”', rvMore: 'Review: show-more button', rvNone: 'Review: no reviews yet', rvCount: 'Review count – use {n}', rvCount1: 'Review count (one review)' };
+    const NAME = { exitTitle: 'Box title', exitText: 'Box message', exitStay: 'Button: stay on the website', exitGo: 'Button: leave', exitHint: 'Small hint (press Back again)', prodAllTitle: 'All-products page title', totalProducts: 'Word “Total Products”', offerTap: 'Offer banner hint “Tap to see”', of_view: 'Offer card button', of_items: 'Word “items”', of_inc: 'Offer page: “What\'s inside” heading', of_price: 'Offer page: special price label', of_save: 'Offer page: “You save”', of_ends: 'Offer page: countdown title', of_d: 'Countdown: days', of_h: 'Countdown: hours', of_m: 'Countdown: minutes', of_s: 'Countdown: seconds', of_from: 'Offer starts label', of_till: 'Offer ends label', of_terms: 'Terms heading', of_more: 'Offer details heading', of_photos: 'Offer photos heading', of_enq: 'Offer WhatsApp button', of_ended: 'Offer ended message', of_soon: 'Offer starting soon message', rvAvg: 'Reviews: average label', backWeb: 'Back to website button', pdfLbl: 'PDF label', viewAllOffers: '“View All Offers” button', offersAllTitle: 'All Offers page title', totalOffers: '“Total Offers” label', productsIncluded: 'Offer card: products included – use {n}', offerWhat: 'Offer page: list heading', offerTotalProducts: 'Offer page: total products', specialPrice: 'Special price label', totalLbl: '“Total” (price label)', closeBtn: 'Close button', seeMoreImg: '“See More Images” button', totalImages: '“Total Images” label', galAllTitle: 'All images page title', seeAllReviews: '“See All Reviews” button', totalReviews: '“Total Reviews” label', rvAllTitle: 'All reviews page title', productsWord: '“Products” word', call: 'Call button', wa: 'WhatsApp button', visit: 'Visit store button', details: 'Product “details” button', enquire: 'Product “enquire” button', viewProducts: '“View all products” button', retailBtn: 'Retail products button', whBtn: 'Wholesale enquiry button', directions: 'Directions button', send: 'Send enquiry button', viewOffer: 'Offer “view details” button', all: '“All” filter', all2: '“All offers”', search: 'Search box hint', notFound: 'No products found', retail: 'Retail tag', wholesale: 'Wholesale tag', retailAv: 'Available in retail', wholesaleAv: 'Available in wholesale', askPrice: 'Price not set', oos: 'Out of stock', enqTitle: 'Enquiry window title', sendEnq: 'Enquiry form title', general: '“General” enquiry type', name: 'Name box', phone: 'Mobile box', msg: 'Message box', quick: 'Footer “Quick links”', hours: 'Store timings heading', address: 'Address heading', ctaT: 'Banner title', ctaS: 'Banner text', eyCat: 'Above Categories', eyProd: 'Above Products', eyRw: 'Above Retail & Wholesale', eyOffers: 'Above Offers', eyWhy: 'Above Why choose us', eyGal: 'Above Gallery', eyContact: 'Above Contact', eyReviews: 'Above Reviews', reviewsTitle: 'Reviews section title', photosSoon: 'Empty gallery message', emailLbl: 'Email heading (contact)', backBtn: 'Back button (offer page)', lastDay: 'Offer: last day', daysLeft: 'Offer: days left – use {n} for the number', dayLeft: 'Offer: 1 day left – use {n} for the number', offerEnded: 'Offer: ended notice', offerPrice: 'Offer: “Offer price”', youSave: 'Offer: “You save”', offerCount: 'Offer: number of products', offerNow: 'Offer: starts now', offerOngoing: 'Offer: no end date', offerPeriod: 'Offer: “Offer period”', offerList: 'Offer: products heading', offerIncl: 'Offer: “What’s included”', offerDetails: 'Offer: “Offer details”', enqOffer: 'Offer: enquire button', errName: 'Enquiry form: name missing', errPhone: 'Enquiry form: bad mobile number', waOpening: 'Message when WhatsApp opens', writeReview: 'Write-a-review button', rvFormTitle: 'Review window title', rvYourName: 'Review: name box', rvYourRating: 'Review: rating heading', rvYourText: 'Review: text box', rvSend: 'Review: submit button', rvThanksPending: 'Review: thanks (waits for approval)', rvThanksLive: 'Review: thanks (published at once)', rvErrName: 'Review: name missing', rvErrRating: 'Review: rating missing', rvErrText: 'Review: text too short', rvErrLinks: 'Review: links not allowed', rvErrLimit: 'Review: too many sent', rvErr: 'Review: could not send', rvShopReply: 'Review: “Reply from the shop”', rvMore: 'Review: show-more button', rvNone: 'Review: no reviews yet', rvCount: 'Review count – use {n}', rvCount1: 'Review count (one review)' };
     const L = C().site.labels || {};
     c.innerHTML = head('Website Text & Labels', 'Change the words on buttons, tags, forms and small headings. Leave a box empty to keep the original wording. Section titles are in Home Page Settings; menu names are in Menu & Sections.') +
       G.map(([t, keys]) => `<div class="card"><h3>${esc(t)}</h3>${keys.map(k => { const d = LBL[k], v = L[k] || ['', '']; return `<div class="lrow" data-k="${k}"><b>${esc(NAME[k] || k)}</b><div class="grid2"><div class="f"><label>Tamil</label><input data-ta value="${esc(v[0] || '')}" placeholder="${esc(d[0])}"></div><div class="f"><label>English</label><input data-en value="${esc(v[1] || '')}" placeholder="${esc(d[1])}"></div></div></div>`; }).join('')}</div>`).join('') +
@@ -663,22 +1007,67 @@ const views = {
   rw(c) { formPage(c, 'Retail & Wholesale Settings', 'Texts of the Retail Shopping and Wholesale Enquiry sections.', [{ group: 'site', fields: [['-', 'Retail / Wholesale tags on products'], ['showAvail', 'Show “Retail / Wholesale available” on product cards and product pages (off = hidden on the website and the product form)', 'bool'], ['-', 'Section heading'], ...pairs(['rwTitle', 'Section title'], ['rwSub', 'Section subtitle']), ['-', 'Retail Shopping'], ...pairs(['retailTitle', 'Retail title'], ['retail', 'Retail description', 'area']), ['retailPointsTa', 'Retail points – Tamil (one per line)', 'area'], ['retailPointsEn', 'Retail points – English (one per line)', 'area'], ['-', 'Wholesale Enquiry'], ...pairs(['wholesaleTitle', 'Wholesale title'], ['wholesale', 'Wholesale description', 'area']), ['wholesalePointsTa', 'Wholesale points – Tamil (one per line)', 'area'], ['wholesalePointsEn', 'Wholesale points – English (one per line)', 'area']] }]); },
   contact(c) { formPage(c, 'Contact Settings', 'Phone, WhatsApp, email, address, store timings and Google Map.', [{ group: 'shop', fields: [['phones', 'Phone numbers (one per line)', 'lines'], ['whatsapp', 'WhatsApp number with country code', 'text', 'Example: 919942875331'], ['email', 'Email'], ['address', 'Store address (one line per row)', 'lines'], ['hours', 'Store timings (one per line, use | between day and time)', 'lines', 'Example: Monday – Saturday | 9:00 AM – 8:30 PM'], ['mapQuery', 'Google Maps search text', 'text', 'Shop name + town. The map and Directions button use this.'], ['countryCode', 'Country code for phone and WhatsApp links (digits only)', 'text', 'India = 91. Numbers you type without a country code get this added so “tap to call” works.']] }, { group: 'site', fields: [['-', 'Contact section'], ['mapShow', 'Show the Google Map', 'bool', '', true], ...pairs(['contactTitle', 'Contact section title'], ['contactSub', 'Contact section subtitle'])] }]); },
   store(c) { formPage(c, 'Store Settings', 'Logo, shop name and basic details.', [{ group: 'site', fields: [['-', 'Shop logo'], ['logo', 'Logo image', 'img', 'Shown in the header, footer, loading screen and browser tab. Use a PNG with a transparent background – it is shown exactly as it is. Press Remove to go back to the Classix default logo.']] }, { group: 'shop', fields: [['name', 'Shop name (English)'], ['nameTa', 'Shop name (Tamil / தமிழ்)'], ['tagline', 'Shop tagline (English)'], ['city', 'City'], ['est', 'Established year'], ['estLabel', 'Word under the year (default EST.)'], ['gstin', 'GSTIN (optional)'], ['gstNote', 'GST note (optional)']] }]); },
+  banner(c) {
+    const DEFB = { festScale: 100, festBarOn: true, festAuto: 5, festBtnOn: true, festBtnTa: '', festBtnEn: '', festH: 0, festFont: 0, festTagFont: 0, festPriceFont: 0, festBtnFont: 0, festBtnPad: 0, festPicSize: 0, festQuality: 'auto', festSpeed: 100, festFxAmount: 7, festShine: true, festPulse: true, festFloat: true, festEntrance: true };
+    const G = [
+      { group: 'site', fields: [
+        ['-', '① Banner, button and auto-slide'],
+        ['festBarOn', 'Show the swipe offers banner at the top of the website (customers swipe left / right)', 'bool', null, true],
+        ['festAuto', 'Slide to the next offer automatically every … seconds (0 = swipe only)', 'range', [0, 20, 1, ' s'], 5],
+        ['festBtnOn', 'Show the button on every banner', 'bool', null, true],
+        ['festBtnTa', 'Default button text – Tamil (empty = சலுகையைப் பார்க்க)'], ['festBtnEn', 'Default button text – English (empty = View offer)']] },
+      { group: 'site', fields: [
+        ['-', '② Sizes – move a slider, then scroll down to see the live preview (0 = automatic)'],
+        ['festScale', 'OVERALL banner size – make everything smaller or bigger together (100% = recommended small size)', 'range', [60, 200, 5, ' %'], 100],
+        ['festH', 'Banner height (0 = automatic)', 'range', [0, 400, 4, ' px'], 0],
+        ['festFont', 'Title text size (0 = automatic)', 'range', [0, 48, 1, ' px'], 0],
+        ['festTagFont', 'Short line text size (0 = automatic)', 'range', [0, 26, 1, ' px'], 0],
+        ['festPriceFont', 'Price size (0 = automatic)', 'range', [0, 44, 1, ' px'], 0],
+        ['festBtnFont', 'Button text size (0 = automatic)', 'range', [0, 28, 1, ' px'], 0],
+        ['festBtnPad', 'Button height / thickness (0 = automatic)', 'range', [0, 30, 1, ' px'], 0],
+        ['festPicSize', 'Round picture / emoji size (0 = automatic)', 'range', [0, 150, 2, ' px'], 0]] },
+      { group: 'site', fields: [
+        ['-', '③ Effects and speed – every effect is light and runs on the phone graphics chip, so it stays smooth'],
+        ['festQuality', 'Smoothness mode', 'select', [['auto', 'Auto – full effects, lighter on weak phones (recommended)'], ['full', 'Full effects on every phone'], ['lite', 'Light – fewer effects, smoothest on old phones'], ['off', 'No animation at all']], 'auto'],
+        ['festSpeed', 'Animation speed (100% = normal)', 'range', [40, 200, 10, ' %'], 100],
+        ['festFxAmount', 'How many floating emojis / stars behind the text (0 = none)', 'range', [0, 12, 1, ''], 7],
+        ['festShine', 'Shining light sweeping over the banner and button', 'bool', null, true],
+        ['festPulse', 'Button, badge and “% OFF” sticker pulse', 'bool', null, true],
+        ['festFloat', 'Picture / emoji floats and glows', 'bool', null, true],
+        ['festEntrance', 'Text and button slide in when a new offer appears', 'bool', null, true]] }];
+    const prev = `<div class="card" id="bnPrev"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 style="margin:0">👁️ Live preview</h3><div class="row" style="gap:6px;flex-wrap:wrap"><button type="button" class="btn out sm" data-pvw="390">📱 Phone</button><button type="button" class="btn out sm" data-pvw="820">📟 Tablet</button><button type="button" class="btn out sm" data-pvw="100%">🖥️ Computer</button></div></div><div style="background:#efe6da;border-radius:12px;overflow:hidden;display:flex;justify-content:center;margin-top:10px"><iframe id="bnFrame" src="/?pv=1" title="Banner preview" style="border:0;width:390px;max-width:100%;height:240px;background:transparent;display:block"></iframe></div><p class="ps" style="margin:8px 0 0">The preview shows your saved offers. Every slider and switch above changes this preview instantly. Press <b>Save</b> (bottom) to publish. Banner texts, colours and buttons of each offer: Offers &amp; Festivals → open an offer → “⑦ Top swipe banner”.</p></div>`;
+    formPage(c, 'Offers Banner Studio', 'Design the swipe banner at the top of your website: size, speed and effects, with a live preview.', G, prev + '<div class="card"><h3>Reset</h3><button type="button" class="btn red" id="bnReset">Reset the banner to the recommended settings</button></div>');
+    c.querySelector('.card').insertAdjacentHTML('beforebegin', '<div style="margin:0 0 12px"><button type="button" class="btn out sm" id="goPrev">👁️ Go to the live preview ↓</button></div>');
+    $('#goPrev', c).onclick = () => $('#bnPrev', c).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const fr = $('#bnFrame', c); let q = 0;
+    const all = () => { const o = {}; G.forEach((g, gi) => Object.assign(o, read($(`[data-g="${gi}"]`, c), g.fields))); return o; };
+    const send = () => { try { fr.contentWindow.postMessage({ cxfest: all() }, location.origin); } catch { /* ignore */ } };
+    const soon = () => { if (q) return; q = requestAnimationFrame(() => { q = 0; send(); }); };
+    c.addEventListener('input', soon); c.addEventListener('change', soon); fr.addEventListener('load', () => { send(); setTimeout(send, 400); });
+    $$('[data-pvw]', c).forEach(b => b.onclick = () => { fr.style.width = b.dataset.pvw.endsWith('%') ? '100%' : b.dataset.pvw + 'px'; setTimeout(send, 150); });
+    const onMsg = e => { if (e.origin !== location.origin || !e.data || typeof e.data.cxfestH !== 'number') return; const f = document.getElementById('bnFrame'); if (!f) { removeEventListener('message', onMsg); return; } if (e.data.cxfestH > 0) f.style.height = Math.min(520, e.data.cxfestH + 2) + 'px'; };
+    addEventListener('message', onMsg);
+    $('#bnReset', c).onclick = async () => { if (!confirm('Reset the banner sizes and effects to the recommended values?')) return; Object.assign(C().site, DEFB); if (await persist()) { toast('Banner reset – live on the website ✓'); render(); } };
+  },
   display(c) {
-    const DEF = { uiZoom: 100, uiHeroHeightM: 420, uiHeroHeightD: 600, uiHeroTitleM: 26, uiHeroTitleD: 54, uiLogo: 56, uiLogoText: false, uiFabLabel: false, offersHomeCount: 3, galleryHomeCount: 6, reviewsHomeCount: 1, offerItemPrices: false, imgFit: 'contain', imgFitHero: 'contain', imgFitProducts: 'contain', imgFitGallery: 'contain', imgFitOffers: 'contain', imgFitAbout: 'contain', uiColsM: '2', uiColsD: '4', uiRatio: '1/1', uiCatIcon: 72, uiCatColsM: '2', uiGalColsM: '2', uiGalColsD: '4', uiSecPad: 56, uiRadius: 20, uiAnim: 'full', uiGlow: true, uiColorBrown: '', uiColorBrown2: '', uiColorGold: '', uiColorGold2: '', uiColorCream: '' };
+    const DEF = { uiZoom: 100, uiHeroHeightM: 420, uiHeroHeightD: 600, uiHeroTitleM: 26, uiHeroTitleD: 54, uiLogo: 56, uiNameShow: true, uiFabLabel: false, offersHomeCount: 3, galleryHomeCount: 6, festBarOn: true, festAuto: 5, festBtnOn: true, uiBrandWrap: false, festH: null, festFont: null, festBtnFont: null, uiBrandFont: null, uiBrandTaFont: null, uiLangH: null, uiLangFont: null, uiMenuBtn: null, uiQnavH: null, uiQnavFont: null, uiAnnFont: null, uiBtnH: null, uiBtnFont: null, uiBtnPadX: null, uiBtnRadius: null, uiCardBtnFont: null, uiCardBtnH: null, uiCardTitleFont: null, uiCardTextFont: null, uiPriceFont: null, uiSecTitleFont: null, uiFooterFont: null, reviewsHomeCount: 1, offerItemPrices: true, imgFit: 'contain', imgFitHero: 'contain', imgFitProducts: 'contain', imgFitGallery: 'contain', imgFitOffers: 'contain', imgFitAbout: 'contain', uiColsM: '2', uiColsD: '4', uiRatio: '1/1', uiCatIcon: 72, uiCatColsM: '2', uiGalColsM: '2', uiGalColsD: '4', uiSecPad: 56, uiRadius: 20, uiAnim: 'full', uiGlow: true, uiColorBrown: '', uiColorBrown2: '', uiColorGold: '', uiColorGold2: '', uiColorCream: '' };
     const F = [
-      ['-', 'Animations & effects'], ['uiAnim', 'Scroll animations', 'select', [['full', 'Full (recommended)'], ['light', 'Light (smoother on old phones)'], ['off', 'Off']]], ['uiGlow', 'Glowing, shining button effects', 'bool'],
+      ['-', 'Header – shop name, logo and the two side buttons'], ['uiBrandFont', 'Shop name size – English (px)', 'num', 'Leave empty = automatic'], ['uiBrandTaFont', 'Shop name size – Tamil (px)', 'num', 'Leave empty = automatic'], ['uiBrandWrap', 'Let a long shop name wrap onto two lines (instead of “…”)', 'bool'], ['uiLangH', 'Language button (த | EN) – height (px)', 'num', 'Leave empty = automatic'], ['uiLangFont', 'Language button – text size (px)', 'num', 'Leave empty = automatic'], ['uiMenuBtn', 'Menu button (☰) – size (px)', 'num', 'Leave empty = automatic'], ['uiQnavH', 'Quick menu pills under the header – height (px)', 'num', 'Leave empty = automatic'], ['uiQnavFont', 'Quick menu pills – text size (px)', 'num', 'Leave empty = automatic'], ['uiAnnFont', 'Top announcement text size (px)', 'num', 'Leave empty = automatic'],
+      ['-', 'Buttons (all buttons on the website)'], ['uiBtnH', 'Button height (px)', 'num', 'Leave empty = automatic'], ['uiBtnFont', 'Button text size (px)', 'num', 'Leave empty = automatic'], ['uiBtnPadX', 'Space inside buttons – left & right (px)', 'num', 'Leave empty = automatic'], ['uiBtnRadius', 'Button corner roundness (px)', 'num', 'Leave empty = automatic'], ['uiCardBtnFont', 'Product-card buttons (Details / Enquire) – text size (px)', 'num', 'Leave empty = automatic'], ['uiCardBtnH', 'Product-card buttons – height (px)', 'num', 'Leave empty = automatic'],
+      ['-', 'Text sizes – cards, prices, titles, footer'], ['uiCardTitleFont', 'Product name size (px)', 'num', 'Leave empty = automatic'], ['uiCardTextFont', 'Product description size (px)', 'num', 'Leave empty = automatic'], ['uiPriceFont', 'Price size (px)', 'num', 'Leave empty = automatic'], ['uiSecTitleFont', 'Section heading size (px)', 'num', 'Leave empty = automatic'], ['uiFooterFont', 'Footer text size (px)', 'num', 'Leave empty = automatic'],
+      ['-', 'Animations & effects'], ['uiAnim', 'Scroll animations', 'select', [['full', 'Full (recommended)'], ['light', 'Light (smoother on old phones)'], ['off', 'Off']]], ['uiScrollFx', 'Scroll effect style (how items appear while scrolling)', 'select', [['rise', 'Rise up & fade (default)'], ['zoom', 'Zoom in'], ['slide', 'Slide in from the sides'], ['bounce', 'Bouncy pop']], 'rise'], ['uiGlow', 'Glowing, shining button effects', 'bool'],
       ['-', 'Brand colours (leave as is to keep the current look)'], ['uiColorBrown', 'Main dark colour (header text, buttons, footer)', 'color', '#4a2f20'], ['uiColorBrown2', 'Second dark colour', 'color', '#5c3d2e'], ['uiColorGold', 'Accent colour (gold)', 'color', '#b08a2e'], ['uiColorGold2', 'Light accent colour', 'color', '#e8c97a'], ['uiColorCream', 'Page background colour', 'color', '#faf6ef'],
       ['-', 'Whole page'], ['uiZoom', 'Overall size of all page content', 'range', [70, 130, 5, '%']], ['uiSecPad', 'Space between sections', 'range', [16, 140, 4, ' px']], ['uiRadius', 'Rounded corners', 'range', [0, 40, 2, ' px']],
-      ['-', 'Logo & header'], ['uiLogo', 'Logo size', 'range', [28, 140, 2, ' px']], ['uiLogoText', 'Also show the shop name text next to the logo', 'bool'],
+      ['-', 'Logo & header'], ['uiLogo', 'Logo size', 'range', [28, 140, 2, ' px']], ['uiNameShow', 'Show the shop name in the header – ON by default, turns OFF only if you untick this', 'bool', '', true],
       ['-', 'Top banner (hero) – phones'], ['uiHeroHeightM', 'Minimum banner height on phones', 'range', [260, 800, 10, ' px']], ['uiHeroTitleM', 'Main title size on phones', 'range', [16, 56, 1, ' px']],
       ['-', 'Top banner (hero) – computers & tablets'], ['uiHeroHeightD', 'Minimum banner height on computers', 'range', [360, 900, 10, ' px']], ['uiHeroTitleD', 'Main title size on computers', 'range', [24, 96, 2, ' px']],
       ['-', 'Products'], ['uiColsM', 'Products per row on phones', 'select', [['1', '1 (large cards)'], ['2', '2 (recommended)']]], ['uiColsD', 'Products per row on computers', 'select', [['3', '3'], ['4', '4'], ['5', '5']]], ['uiRatio', 'Product photo shape', 'select', [['1/1', 'Square'], ['4/3', 'Wide'], ['3/4', 'Tall']]],
       ['-', 'Categories'], ['uiCatIcon', 'Category icon size', 'range', [40, 130, 2, ' px']], ['uiCatColsM', 'Categories per row on phones', 'select', [['2', '2'], ['3', '3']]],
       ['-', 'Shop gallery'], ['uiGalColsM', 'Gallery photos per row on phones', 'select', [['1', '1'], ['2', '2'], ['3', '3']]], ['uiGalColsD', 'Gallery photos per row on computers', 'select', [['3', '3'], ['4', '4'], ['5', '5']]],
-      ['-', 'Home page lists  (0 = show all)'], ['offersHomeCount', 'How many offers to show on the home page', 'range', [0, 30, 1, '']], ['galleryHomeCount', 'How many shop photos to show first (rest open with “See More Images”)', 'range', [0, 60, 1, '']], ['reviewsHomeCount', 'How many reviews to show first (rest open with “See All Reviews”)', 'range', [0, 30, 1, '']], ['offerItemPrices', 'Offer page: also show each product’s price (off = names only, with total price)', 'bool'], ['-', 'Photo display – choose for each area'], ['imgFitHero', 'Home banner / slider photos', 'select', [['contain', 'Show the FULL photo (nothing cut off)'], ['cover', 'Fill the box (edges may be cropped)']]], ['imgFitProducts', 'Product photos', 'select', [['contain', 'Show the FULL photo (nothing cut off)'], ['cover', 'Fill the box (edges may be cropped)']]], ['imgFitGallery', 'Shop gallery photos', 'select', [['contain', 'Show the FULL photo (nothing cut off)'], ['cover', 'Fill the box (edges may be cropped)']]], ['imgFitOffers', 'Offer photos', 'select', [['contain', 'Show the FULL photo (nothing cut off)'], ['cover', 'Fill the box (edges may be cropped)']]], ['imgFitAbout', 'About us photos', 'select', [['contain', 'Show the FULL photo (nothing cut off)'], ['cover', 'Fill the box (edges may be cropped)']]],
+      ['-', 'Home page lists  (0 = show all)'], ['offersHomeCount', 'How many offers to show on the home page', 'range', [0, 30, 1, '']], ['galleryHomeCount', 'How many shop photos to show first (rest open with “See More Images”)', 'range', [0, 60, 1, '']], ['reviewsHomeCount', 'How many reviews to show first (rest open with “See All Reviews”)', 'range', [0, 30, 1, '']], ['offerItemPrices', 'Offer page: also show each product’s price (off = names only, with total price)', 'bool', '', true], ['-', 'Photo display – choose for each area'], ['imgFitHero', 'Home banner / slider photos', 'select', [['contain', 'Show the FULL photo (nothing cut off)'], ['cover', 'Fill the box (edges may be cropped)']]], ['imgFitProducts', 'Product photos', 'select', [['contain', 'Show the FULL photo (nothing cut off)'], ['cover', 'Fill the box (edges may be cropped)']]], ['imgFitGallery', 'Shop gallery photos', 'select', [['contain', 'Show the FULL photo (nothing cut off)'], ['cover', 'Fill the box (edges may be cropped)']]], ['imgFitOffers', 'Offer photos', 'select', [['contain', 'Show the FULL photo (nothing cut off)'], ['cover', 'Fill the box (edges may be cropped)']]], ['imgFitAbout', 'About us photos', 'select', [['contain', 'Show the FULL photo (nothing cut off)'], ['cover', 'Fill the box (edges may be cropped)']]],
       ['-', 'WhatsApp button'], ['uiFabLabel', 'Show the words “WhatsApp Us” on the floating button on phones (off = small round button)', 'bool']
     ];
-    formPage(c, 'Display & Sizes', 'Control the size and layout of items on the customer website. Fonts, text sizes and spacing are in Typography Settings. Press Save, then use Refresh Customer Website to see the result.', [{ group: 'site', fields: F }], '<div class="card"><h3>Reset</h3><button type="button" class="btn red" id="uiReset">Reset all sizes to the recommended values</button></div>');
+    formPage(c, 'Display & Sizes', 'Control the size and layout of everything on the customer website: header (shop name, logo, side buttons), buttons, cards, prices, footer. Fonts, text sizes and spacing are in Typography Settings. Press Save, then use Refresh Customer Website to see the result.', [{ group: 'site', fields: F }], '<div class="card"><h3>Reset</h3><button type="button" class="btn red" id="uiReset">Reset all sizes to the recommended values</button></div>');
     $('#uiReset').onclick = async () => { if (!confirm('Reset every size on this page to the recommended values?')) return; Object.assign(C().site, DEF); if (await persist()) { toast('Sizes reset – live on the website ✓'); render(); } };
   },
   social(c) {
@@ -692,15 +1081,70 @@ const views = {
     c.innerHTML = head('Backup & Security', 'Keep your content safe and protect your admin account.') + `
     <div class="card"><h3>☁️ Data safety &amp; always-awake</h3><div id="cloudBox"><div class="empty">Checking…</div></div></div>
     <div class="card"><h3>Change admin login</h3><p class="ps" style="margin-bottom:10px">You can sign in with <b>either Password 1 or Password 2</b>. Enter one current password, then change the username and/or either password. Leave a box empty to keep it. Each password needs 8+ characters with letters and numbers, and the two must be different.</p><div class="grid2"><div class="f"><label>Current password (1 or 2)</label>${pw('pw1', 'off')}</div><div class="f"><label>New username (optional)</label><input id="pwU" autocomplete="off" maxlength="40"></div><div class="f"><label>New password 1 (optional)</label>${pw('pw2', 'new-password')}</div><div class="f"><label>New password 2 (optional)</label>${pw('pw2b', 'new-password')}</div></div><button class="btn out" id="pwBtn">Change login</button></div>
-    <div class="card"><h3>Full website backup (ZIP)</h3><p class="ps" style="margin-bottom:12px">Downloads EVERYTHING in one ZIP: shop details, offers, products, prices, gallery, reviews, all settings (social links, WhatsApp group switch, typography, menu, sizes), every uploaded photo/PDF, visitor statistics and saved content versions. Upload the same ZIP later (on this site or a brand-new copy) and the website comes back exactly as it was.</p><div class="f chk" style="margin-bottom:12px"><input type="checkbox" id="zipAuth"><label for="zipAuth">Also include / restore the admin login (username + password hashes). Tick this for a complete copy; keep the ZIP private.</label></div><div class="row"><button class="btn gold" id="zipExp">⬇ Download full backup (.zip)</button><label class="btn out">⬆ Restore full backup (.zip)<input type="file" id="zipImp" accept=".zip,application/zip" hidden></label></div><p class="ps" style="margin-top:10px">Before restoring, a safety copy of the current data is created. Without the tick above, restore keeps your current admin password. Store downloaded backups somewhere private.</p></div><div class="card"><h3>Content-only backup (JSON)</h3><p class="ps" style="margin-bottom:12px">For text, products and settings only; photos are not included in this small backup.</p><div class="row"><button class="btn out" id="exp">⬇ Export content (.json)</button><label class="btn out">⬆ Import content<input type="file" id="imp" accept=".json,application/json" hidden></label></div></div>
+    <div class="card"><h3>Full website backup (ZIP)</h3><p class="ps" style="margin-bottom:12px">Downloads EVERYTHING in one ZIP: shop details, offers, products, prices, gallery, reviews, all settings (social links, WhatsApp group switch, typography, menu, sizes), every uploaded photo/PDF, visitor statistics and saved content versions. Upload the same ZIP later (on this site or a brand-new copy) and the website comes back exactly as it was.</p><div class="f chk" style="margin-bottom:12px"><input type="checkbox" id="zipAuth"><label for="zipAuth">Also include / restore the admin login (username + password hashes). Tick this for a complete copy; keep the ZIP private.</label></div><div class="row"><button class="btn gold" id="zipExp">⬇ Download full backup (.zip)</button><label class="btn out" id="zipImpL">⬆ Restore full backup (.zip)<input type="file" id="zipImp" accept=".zip,application/zip,application/x-zip-compressed,application/octet-stream" hidden></label></div><div class="zprog" id="zipProg" hidden><div class="zp-top"><b id="zpTitle">…</b><span id="zpPct">0%</span></div><div class="zp-bar"><i id="zpFill"></i></div><div class="zp-sub" id="zpSub"></div><div class="zp-warn" id="zpWarn"></div><button type="button" class="btn red sm" id="zpCancel">✕ Cancel</button></div><p class="ps" style="margin-top:10px">Restore takes every valid file from the ZIP; wrong or damaged files are skipped automatically and never stop the restore. Before restoring, a safety copy of the current data is created. Without the tick above, restore keeps your current admin password. Store downloaded backups somewhere private.</p></div><div class="card"><h3>Content-only backup (JSON)</h3><p class="ps" style="margin-bottom:12px">For text, products and settings only; photos are not included in this small backup.</p><div class="row"><button class="btn out" id="exp">⬇ Export content (.json)</button><label class="btn out">⬆ Import content<input type="file" id="imp" accept=".json,application/json" hidden></label></div></div>
     <div class="card"><h3>Automatic backups</h3><p class="ps" style="margin-bottom:12px">A copy of the previous version is kept every time you save (last 40). Restore one if something goes wrong.</p><div id="bk">Loading…</div></div>
     <div class="card"><h3>Free up space</h3><p class="ps" style="margin-bottom:12px">Deletes uploaded photos that are not used anywhere (including in the automatic backups).</p><button class="btn out" id="clean">Delete unused photos</button></div>
     <div class="card"><h3>Sign out</h3><button class="btn red" id="out2">Sign out of this device</button></div>`;
     const dl = (name, text, type) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
     $('#pwBtn').onclick = async () => { try { await api('/password', { method: 'POST', body: { current: $('#pw1').value, username: $('#pwU').value.trim(), next1: $('#pw2').value, next2: $('#pw2b').value } }); toast('Login details changed ✓'); ['pw1', 'pwU', 'pw2', 'pw2b'].forEach(i => $('#' + i).value = ''); } catch (ex) { toast(ex.message, true); } };
-    $('#exp').onclick = async () => { try { const d = await api('/content'); dl('classic-home-needs-content.json', JSON.stringify(d, null, 2), 'application/json'); } catch (ex) { toast(ex.message, true); } };
-    $('#zipExp').onclick = async () => { const b=$('#zipExp'); b.disabled=true; try { const r=await fetch(BASE+'/api/backup/export'+($('#zipAuth').checked?'?auth=1':''),{credentials:'same-origin',cache:'no-store',headers:{'X-Requested-With':'cx'}}); if(!r.ok){let j={};try{j=await r.json()}catch{} throw new Error(j.error||'Backup download failed');} const blob=await r.blob(); const a=document.createElement('a'); const u=URL.createObjectURL(blob); a.href=u; const d=new Date(); const stamp=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')+'_'+[String(d.getHours()).padStart(2,'0'),String(d.getMinutes()).padStart(2,'0'),String(d.getSeconds()).padStart(2,'0')].join('-'); a.download='classix-home-needs-full-backup-'+stamp+'.zip'; a.click(); setTimeout(()=>URL.revokeObjectURL(u),5000); toast('Full ZIP backup downloaded ✓'); } catch(ex){toast(ex.message,true)} finally{b.disabled=false;} };
-    $('#zipImp').onchange = async e => { const f=e.target.files[0]; if(!f)return; try { if(!/\.zip$/i.test(f.name)) throw new Error('Please choose a ZIP backup file'); if(!confirm('Restore this full ZIP backup? Website content and visitor statistics may be replaced. Your current admin password will stay unchanged. A safety backup will be created first.')) return; const r=await fetch(BASE+'/api/backup/restore'+($('#zipAuth').checked?'?auth=1':''),{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'X-Requested-With':'cx','Content-Type':'application/zip'},body:f}); let j={}; try{j=await r.json()}catch{} if(!r.ok)throw new Error(j.error||'Restore failed'); if(j.loggedOut){ toast(j.message); setTimeout(()=>location.reload(),2500); return; } C0=j.content||await api('/content'); toast('Full backup restored ✓'); render(); } catch(ex){toast(ex.message,true)} finally{e.target.value='';} };
+    $('#exp').onclick = async () => { try { const d = await api('/content'); dl('classix-home-needs-content.json', JSON.stringify(d, null, 2), 'application/json'); } catch (ex) { toast(ex.message, true); } };
+    const zp = { box: $('#zipProg'), t: $('#zpTitle'), pct: $('#zpPct'), fill: $('#zpFill'), sub: $('#zpSub'), warn: $('#zpWarn'), cancel: $('#zpCancel') };
+    let zMode = '', zAbort = null, zPoll = 0;
+    const mb = n => (n / 1048576).toFixed(1) + ' MB';
+    const zShow = (title, pct, sub, indet) => { zp.box.hidden = false; zp.t.textContent = title; zp.pct.textContent = indet ? '' : Math.round(pct) + '%'; zp.fill.style.width = (indet ? 100 : Math.max(2, Math.min(100, pct))) + '%'; zp.box.classList.toggle('indet', !!indet); zp.sub.textContent = sub || ''; };
+    const zLock = on => { $('#zipExp').disabled = on; $('#zipImpL').classList.toggle('dis', on); zp.cancel.hidden = !on; };
+    const zEnd = () => { clearInterval(zPoll); zPoll = 0; zMode = ''; zAbort = null; zLock(false); };
+    const zWatch = title => { clearInterval(zPoll); zPoll = setInterval(async () => { try { const r = await fetch(BASE + '/api/backup/progress', { credentials: 'same-origin', cache: 'no-store', headers: { 'X-Requested-With': 'cx', 'X-Poll': '1' } }); const j = await r.json(); if (!j.active) return; if (j.total) zShow(title, j.done / j.total * 100, (j.phase || '') + ' · ' + j.done + ' / ' + j.total); else zShow(title, 0, j.phase || '', true); } catch { /* ignore */ } }, 500); };
+    zp.cancel.onclick = async () => {
+      if (zMode === 'restoring') { zp.cancel.disabled = true; zp.sub.textContent = 'Cancelling…'; try { await fetch(BASE + '/api/backup/cancel', { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'cx', 'Content-Type': 'application/json' }, body: '{}' }); } catch { /* ignore */ } }
+      else if (zAbort) zAbort();
+    };
+    $('#zipExp').onclick = async () => {
+      if (zMode) return; zMode = 'download'; zLock(true); zp.cancel.disabled = false; zp.warn.textContent = '';
+      const ab = new AbortController(); zAbort = () => ab.abort();
+      zShow('Preparing your backup…', 0, 'Collecting files', true); zWatch('Preparing your backup…');
+      try {
+        const r = await fetch(BASE + '/api/backup/export' + ($('#zipAuth').checked ? '?auth=1' : ''), { credentials: 'same-origin', cache: 'no-store', headers: { 'X-Requested-With': 'cx' }, signal: ab.signal });
+        clearInterval(zPoll);
+        if (!r.ok) { let j = {}; try { j = await r.json(); } catch { /* ignore */ } throw new Error(j.error || 'Backup download failed'); }
+        const total = Number(r.headers.get('Content-Length')) || 0, rd = r.body && r.body.getReader ? r.body.getReader() : null, chunks = []; let got = 0;
+        if (rd) { for (;;) { const { done, value } = await rd.read(); if (done) break; chunks.push(value); got += value.length; zShow('Downloading backup…', total ? got / total * 100 : 0, mb(got) + (total ? ' of ' + mb(total) : ''), !total); } }
+        else { const ab2 = new Uint8Array(await r.arrayBuffer()); chunks.push(ab2); got = ab2.length; }
+        const blob = new Blob(chunks, { type: 'application/zip' }), a = document.createElement('a'), u = URL.createObjectURL(blob); a.href = u; const d = new Date(), z2 = n => String(n).padStart(2, '0');
+        a.download = 'classix-home-needs-full-backup-' + d.getFullYear() + '-' + z2(d.getMonth() + 1) + '-' + z2(d.getDate()) + '_' + z2(d.getHours()) + '-' + z2(d.getMinutes()) + '-' + z2(d.getSeconds()) + '.zip'; a.click(); setTimeout(() => URL.revokeObjectURL(u), 8000);
+        zShow('Download complete ✓', 100, mb(got) + ' saved to your device'); toast('Full ZIP backup downloaded ✓');
+      } catch (ex) { if (ex && ex.name === 'AbortError') { zShow('Download cancelled', 0, 'Nothing was changed.'); toast('Download cancelled'); } else { zShow('Download failed', 0, ex.message || 'Please try again'); toast(ex.message || 'Backup download failed', true); } }
+      finally { zEnd(); }
+    };
+    $('#zipImp').onchange = async e => {
+      const f = e.target.files[0]; e.target.value = ''; if (!f || zMode) return;
+      if (!/\.zip$/i.test(f.name) && !/zip/i.test(f.type)) { toast('Please choose a ZIP backup file', true); return; }
+      if (!confirm('Restore this ZIP?\n\nEvery valid file inside is restored. Wrong or damaged files are skipped automatically. A safety copy of your current data is saved first.' + ($('#zipAuth').checked ? '' : '\nYour current admin password stays unchanged.'))) return;
+      zMode = 'uploading'; zLock(true); zp.cancel.disabled = false; zp.warn.textContent = '';
+      const xhr = new XMLHttpRequest(); zAbort = () => xhr.abort();
+      zShow('Uploading backup…', 0, '0 MB of ' + mb(f.size));
+      const res = await new Promise(done => {
+        xhr.open('POST', BASE + '/api/backup/restore' + ($('#zipAuth').checked ? '?auth=1' : '')); xhr.withCredentials = true;
+        xhr.setRequestHeader('X-Requested-With', 'cx'); xhr.setRequestHeader('Content-Type', 'application/zip');
+        xhr.upload.onprogress = ev => { if (ev.lengthComputable) zShow('Uploading backup…', ev.loaded / ev.total * 100, mb(ev.loaded) + ' of ' + mb(ev.total)); };
+        xhr.upload.onload = () => { zMode = 'restoring'; zShow('Restoring your website…', 0, 'Reading the ZIP', true); zWatch('Restoring your website…'); };
+        xhr.onload = () => { let j = {}; try { j = JSON.parse(xhr.responseText); } catch { /* ignore */ } done({ ok: xhr.status >= 200 && xhr.status < 300, j }); };
+        xhr.onerror = () => done({ err: 'Network problem – please try again.' }); xhr.onabort = () => done({ aborted: true }); xhr.ontimeout = () => done({ err: 'The upload took too long.' });
+        xhr.send(f);
+      });
+      clearInterval(zPoll);
+      try {
+        if (res.aborted) { zShow('Upload cancelled', 0, 'Nothing was changed.'); toast('Restore cancelled – nothing was changed'); }
+        else if (res.err) { zShow('Restore failed', 0, res.err); toast(res.err, true); }
+        else if (!res.ok) { const m = (res.j && res.j.error) || 'Restore failed'; zShow('Restore failed', 0, m); toast(m, true); }
+        else if (res.j.cancelled) { zShow('Restore cancelled', 0, res.j.message); toast('Restore cancelled'); }
+        else {
+          zShow('Restore complete ✓', 100, res.j.message || ''); if (res.j.warnings && res.j.warnings.length) zp.warn.textContent = '⚠ ' + res.j.warnings.join('  ⚠ ');
+          if (res.j.loggedOut) { toast(res.j.message); setTimeout(() => location.reload(), 3500); return; }
+          C0 = res.j.content || await api('/content'); toast('Backup restored ✓'); setTimeout(() => { if (tab === 'backup') { const keep = zp.box.hidden; render(); } }, 6000);
+        }
+      } finally { zEnd(); }
+    };
     $('#imp').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { const d = JSON.parse(await f.text()); if (!d.shop || !d.site || !d.categories) throw new Error('This is not a content file'); if (!confirm('Replace ALL current website content with this file?')) return; d.v = C().v; C0 = d; if (await persist(true)) { toast('Imported – live on the website ✓'); render(); } else C0 = await api('/content'); } catch (ex) { toast(ex.message, true); } e.target.value = ''; };
     const loadBk = async () => { try { const r = await api('/backups'); $('#bk').innerHTML = r.backups.length ? `<div class="tw"><table><tbody>${r.backups.slice(0, 15).map(b => `<tr><td>${esc(new Date(b.time).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }))}</td><td>${Math.round(b.size / 1024)} KB</td><td><button class="btn out sm" data-restore="${esc(b.name)}">Restore</button></td></tr>`).join('')}</tbody></table></div>` : 'No backups yet – one is created the first time you save.';
       $$('[data-restore]', $('#bk')).forEach(b => b.onclick = async () => { if (!confirm('Restore this version? Your current content is backed up first.')) return; try { const x = await api('/restore', { method: 'POST', body: { name: b.dataset.restore } }); C0 = x.content; toast('Restored – live on the website ✓'); render(); } catch (ex) { toast(ex.message, true); } }); } catch (ex) { $('#bk').textContent = ex.message; } };
@@ -709,21 +1153,21 @@ const views = {
     $('#out2').onclick = logout;
   },
   home(c) {
-    const T = [['hero', 'Hero'], ['sections', 'Section Titles'], ['showcase', 'Product Showcase'], ['why', 'Why Choose Us'], ['about', 'About'], ['reviews', 'Reviews'], ['footer', 'Footer & Chat']]; const cur = sub.home || 'hero';
+    const T = [['hero', 'Hero'], ['sections', 'Category Title'], ['showcase', 'Product Showcase'], ['why', 'Why Choose Us'], ['about', 'About'], ['reviews', 'Reviews'], ['footer', 'WhatsApp Button']]; const cur = sub.home || 'hero';
     c.innerHTML = head('Home Page Settings', 'Edit every text and photo of the website. No code needed – press Save and it updates.') + tabsBar('ht', T, cur) + '<div id="hb"></div>';
     $$('#ht button').forEach(b => b.onclick = () => { sub.home = b.dataset.s; render(); });
     const hb = $('#hb');
-    if (cur === 'hero') formPage(hb, null, null, [{ group: 'site', fields: [['-', 'Announcement bar (top of the website)'], ['announcementTa', 'Announcement – Tamil / தமிழ்'], ['announcement', 'Announcement – English'], ['-', 'Hero heading'], ...pairs(['heroTag', 'Small tag above title']), ['heroTitleTa', 'Main hero title – Tamil / தமிழ்', 'area'], ['heroTitleEn', 'Main hero title – English', 'area'], ...pairs(['heroSub', 'Subtitle']), ...pairs(['promo', 'Promotional text']), ...pairs(['storeTagline', 'Store tagline']), ['-', 'Hero buttons'], ...[1, 2, 3].flatMap(n => [[`btn${n}TextTa`, `Button ${n} text – Tamil`], [`btn${n}TextEn`, `Button ${n} text – English`], [`btn${n}Link`, `Button ${n} link`, 'text', '#products  #rw  #contact  #gallery  or https://… or tel:+91…']])] }], '', { slides: true });
-    else if (cur === 'sections') formPage(hb, null, null, [{ group: 'site', fields: pairs(['categoriesTitle', 'Category section title'], ['categoriesSub', 'Category section subtitle'], ['productsTitle', 'Product showcase title'], ['productsSub', 'Product showcase subtitle'], ['rwTitle', 'Retail & Wholesale title'], ['rwSub', 'Retail & Wholesale subtitle'], ['offersTitle', 'Offers title'], ['offersSub', 'Offers subtitle'], ['whyTitle', 'Why Choose Us title'], ['whySub', 'Why Choose Us subtitle'], ['galleryTitle', 'Shop Gallery title'], ['galleryDesc', 'Gallery description'], ['contactTitle', 'Contact title'], ['contactSub', 'Contact subtitle']) }]);
+    if (cur === 'hero') formPage(hb, null, null, [{ group: 'site', fields: [['-', 'Hero heading'], ...pairs(['heroTag', 'Small tag above title']), ['heroTitleTa', 'Main hero title – Tamil / தமிழ்', 'area'], ['heroTitleEn', 'Main hero title – English', 'area'], ...pairs(['heroSub', 'Subtitle']), ...pairs(['promo', 'Promotional text']), ...pairs(['storeTagline', 'Store tagline']), ['-', 'Hero buttons'], ...[1, 2, 3].flatMap(n => [[`btn${n}TextTa`, `Button ${n} text – Tamil`], [`btn${n}TextEn`, `Button ${n} text – English`], [`btn${n}Link`, `Button ${n} link`, 'text', '#products  #rw  #contact  #gallery  or https://… or tel:+91…']])] }], '', { slides: true });
+    else if (cur === 'sections') formPage(hb, null, null, [{ group: 'site', fields: pairs(['categoriesTitle', 'Category section title'], ['categoriesSub', 'Category section subtitle']) }]);
     else if (cur === 'showcase') {
       hb.innerHTML = `<div id="fw"></div><div class="card"><h3>Featured products (shown first)</h3><p class="hint">Tick the products you want shown first in the Product Showcase.</p>${C().products.map(p => `<div class="f chk"><input type="checkbox" data-fp="${p.id}" id="f${p.id}" ${p.featured ? 'checked' : ''}><label for="f${p.id}">${esc(p.name)} <small>${esc(p.nameTa || '')}</small></label></div>`).join('')}<button class="btn gold" id="fpSave">💾 Save featured products</button></div>`;
-      formPage($('#fw'), null, null, [{ group: 'site', fields: pairs(['productsTitle', 'Product showcase title'], ['productsSub', 'Description']) }]);
+      formPage($('#fw'), null, null, [{ group: 'site', fields: [...pairs(['productsTitle', 'Product showcase title'], ['productsSub', 'Description']), ['-', 'Products on the home page'], ['productsHomeCount', 'How many products to show on the home page first (0 = show all). The rest open on the “View All Products” page.', 'range', [0, 60, 1, ''], 8]] }]);
       $('#fpSave').onclick = async () => { C().products.forEach(p => p.featured = $(`[data-fp="${p.id}"]`).checked); await persist(); toast('Saved ✓'); };
     }
     else if (cur === 'why') listPage(hb, { lists: [{ key: 'why', title: 'Why Choose Us points', fields: WHY_F, titleFn: it => it.titleEn || 'Point', add: 'Add point', blank: { icon: '⭐' } }, { key: 'stats', title: 'Numbers (animated counters)', fields: STAT_F, titleFn: it => it.en || 'Number', add: 'Add number', blank: {} }, { key: 'strips', title: 'Scrolling highlights strip', fields: STRIP_F, titleFn: it => it.en || 'Highlight', add: 'Add highlight', blank: {} }], extra: [{ group: 'site', fields: pairs(['whyTitle', 'Section title'], ['whySub', 'Section subtitle']) }] });
     else if (cur === 'about') formPage(hb, null, null, [{ group: 'site', fields: [...pairs(['aboutTitle', 'About title']), ['aboutTa', 'About content – Tamil / தமிழ்', 'area'], ['aboutEn', 'About content – English', 'area'], ['aboutImage', 'About photo', 'img']] }]);
     else if (cur === 'reviews') { C().testimonials = C().testimonials || []; listPage(hb, { lists: [{ key: 'testimonials', title: 'Customer reviews', fields: TESTI_F, titleFn: it => it.name || 'Review', add: 'Add review', blank: {}, top: true }], hint: 'Use real customer words only. The review you add last is shown first. Remove all reviews to hide this section.' }); }
-    else formPage(hb, null, null, [{ group: 'site', fields: [...pairs(['footerText', 'Footer text']), ['copyright', 'Copyright text'], ['creatorName', 'Footer credit – name'], ['creatorPhone', 'Footer credit – mobile'], ['-', 'Floating WhatsApp button'], ['waButton', 'Show WhatsApp button on the website', 'bool'], ['waButtonMode', 'The floating WhatsApp button opens', 'select', [['contact', 'A chat with the shop (number in Contact Settings)'], ['group', 'The WhatsApp group (link in Social Media Settings)']]], ['waLabel', 'Button label'], ['waPos', 'Button side', 'select', [['right', 'Right'], ['left', 'Left']]], ['waSize', 'Button size', 'range', [44, 84, 2, ' px']], ['waBottom', 'Height from the bottom', 'range', [8, 160, 2, ' px']], ['waSide', 'Distance from the screen edge', 'range', [4, 60, 2, ' px']], ['waAutoHide', 'Hide the button while scrolling on phones (off = always visible)', 'bool'], ['waMessage', 'Preset message', 'area']] }]);
+    else formPage(hb, null, null, [{ group: 'site', fields: [['-', 'Floating WhatsApp button'], ['waButton', 'Show WhatsApp button on the website', 'bool'], ['waButtonMode', 'The floating WhatsApp button opens', 'select', [['contact', 'A chat with the shop (number in Contact Settings)'], ['group', 'The WhatsApp group (link in Social Media Settings)']]], ['waLabel', 'Button label'], ['waPos', 'Button side', 'select', [['right', 'Right'], ['left', 'Left']]], ['waSize', 'Button size', 'range', [44, 84, 2, ' px']], ['waBottom', 'Height from the bottom', 'range', [8, 160, 2, ' px']], ['waSide', 'Distance from the screen edge', 'range', [4, 60, 2, ' px']], ['waAutoHide', 'Hide the button while scrolling on phones (off = always visible)', 'bool'], ['waMessage', 'Preset message', 'area']] }]);
   }
 };
 
@@ -833,7 +1277,7 @@ async function logout() { try { await api('/logout', { method: 'POST', body: {} 
 async function idleCheck() { if (!authed || Date.now() - lastAct <= idleMs) return; try { await api('/logout', { method: 'POST', body: {} }); } catch { /* ignore */ } authed = false; C0 = null; document.body.classList.remove('noscroll'); showLogin('You were signed out because the admin panel was inactive. Please sign in again.'); }
 setInterval(idleCheck, 15000); document.addEventListener('visibilitychange', () => { if (!document.hidden) idleCheck(); });
 function showLogin(msg, ok) {
-  $('#app').innerHTML = `<div class="login"><form id="lf" autocomplete="on"><h1>Classic Home Needs</h1><p>Admin Dashboard – sign in</p>
+  $('#app').innerHTML = `<div class="login"><form id="lf" autocomplete="on"><h1>Classix Home Needs</h1><p>Admin Dashboard – sign in</p>
     <div class="f"><label for="lu">Username</label><input id="lu" autocomplete="username" autocapitalize="characters" spellcheck="false" maxlength="60"></div>
     <div class="f" style="margin-bottom:4px"><label for="lp">Password</label>${pw('lp', 'current-password', 'maxlength="200"')}</div>
     <div class="${ok ? 'okmsg' : 'err'}" id="le" role="alert">${esc(msg || '')}</div><button class="btn gold" style="width:100%" type="submit">Sign in</button></form></div>`;
@@ -842,7 +1286,7 @@ function showLogin(msg, ok) {
 }
 async function enter() {
   try { C0 = await api('/content'); } catch (ex) { return showLogin(ex.message); }
-  tab = 'dashboard'; sub = {}; layout(); render(); updateBadge();
+  tab = 'dashboard'; sub = {}; layout(); render(); updateBadge(); aGuard();
 }
 (async () => {
   try {
