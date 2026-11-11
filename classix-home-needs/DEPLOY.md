@@ -66,7 +66,7 @@ Replace the program files with the new ZIP but **keep the data folder** (`DATA_D
 Health check URL: `/healthz`.
 
 ## 4. Photos & PDFs
-* Allowed: JPG, JPEG, PNG, HEIC/HEIF (converted automatically) and PDF – **max 12 MB per file** (HEIC photos are converted to JPEG on the server in about a second; PDFs open in a new tab).
+* Allowed: JPG, JPEG, PNG, HEIC/HEIF (converted automatically) and PDF – **max 20 MB per file** (videos: up to 2 minutes, any size) (HEIC photos are converted to JPEG on the server in about a second; PDFs open in a new tab).
 * HEIC conversion uses `admin/heic2any.min.js` (already included).
 * If nginx is used keep `client_max_body_size 120m;` (a full-backup ZIP restore can be large).
 

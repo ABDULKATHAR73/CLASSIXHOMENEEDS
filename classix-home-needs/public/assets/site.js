@@ -1,9 +1,32 @@
+/* ---------- Smooth engine (v3.6): ALL effects stay ON. They are made cheap instead:
+   - animations run only for boxes/sections that are on screen, and pause while the page is being scrolled
+   - the running-light border is drawn for at most 8 boxes at a time (the ones nearest the middle of the screen)
+   - emergency only: if the screen is really slow (<30 fps for 1.5 s) the heavy extras are dropped. ?perf=lite / ?perf=full to test. */
+(function () {
+  try {
+    var R = document.documentElement, m = /[?&]perf=(lite|full)/.exec(location.search);
+    R.dataset.perf = m ? m[1] : 'full';
+    if (m || !window.requestAnimationFrame) return;
+    var n = 0, t0 = 0, go = function (t) { if (document.hidden) { n = 0; t0 = 0; return requestAnimationFrame(go); } if (!t0) t0 = t; n++; if (t - t0 < 1500) return requestAnimationFrame(go); if (n / ((t - t0) / 1000) < 30) R.dataset.perf = 'lite'; };
+    addEventListener('load', function () { setTimeout(function () { requestAnimationFrame(go); }, 1500); });
+  } catch (e) { /* speed help only */ }
+  /* pause endless animations of sections that are off screen, and everything decorative while scrolling */
+  try {
+    if (!window.IntersectionObserver) return;
+    var R2 = document.documentElement, ioOff = new IntersectionObserver(function (es) { es.forEach(function (e) { e.target.classList.toggle('cx-off', !e.isIntersecting); }); }, { rootMargin: '120px 0px' });
+    var seen = new WeakSet(), scan = function () { document.querySelectorAll('#site > *, .sec, .strip, .hero, footer').forEach(function (el) { if (!seen.has(el)) { seen.add(el); ioOff.observe(el); } }); };
+    var tm = 0, later = function () { clearTimeout(tm); tm = setTimeout(scan, 250); };
+    new MutationObserver(later).observe(document.documentElement, { childList: true, subtree: true });
+    var sc = 0; addEventListener('scroll', function () { if (!sc) R2.classList.add('cx-scr'); clearTimeout(sc); sc = setTimeout(function () { sc = 0; R2.classList.remove('cx-scr'); }, 120); }, { passive: true });
+    document.addEventListener('DOMContentLoaded', later);
+  } catch (e) { /* speed help only */ }
+})();
 /* Classix Home Needs – customer website (Tamil + English). Content comes from the server on every page load. */
 (() => {
 'use strict';
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-let C = null, products = [];
+let C = null, products = []; Object.defineProperty(window, '__cxC', { get: () => C });
 
 /* ---------- icons ---------- */
 const P = {
@@ -83,7 +106,13 @@ const hrefAttr = l => /^https?:/i.test(String(l).trim()) ? `href="${esc(okLink(l
 const catOf = id => C.categories.find(c => c.id === id);
 const toast = m => { const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 3000); };
 const isPdf = u => /\.pdf($|\?)/i.test(String(u || ''));
-const img = (src, alt, extra = '') => isPdf(src) ? `<span class="pdfi" role="img" aria-label="PDF"><b>📄</b>PDF</span>` :  `<img src="${esc(src)}" alt="${esc(alt)}" loading="lazy" decoding="async" ${extra}>`;
+const vidSound = u => /[?&]snd=1\b/.test(String(u || ''));
+/* sound rule: a video is silent and shows NO sound control unless the admin switched Sound ON for that video */
+const applySnd = (v, src) => { if (!v) return; const on = vidSound(src || v.getAttribute('src')); v.classList.toggle('nosnd', !on); v.muted = !on; if (!v.__snd) { v.__snd = 1; v.addEventListener('volumechange', () => { if (v.classList.contains('nosnd') && !v.muted) v.muted = true; }); } };
+const sndBtn = (v, host) => { if (!v || !host || v.__btn) return null; const b = v.__btn = document.createElement('button'); b.type = 'button'; b.className = 'cx-snd'; b.setAttribute('aria-label', 'Sound'); host.appendChild(b); const sync = () => { const on = vidSound(v.getAttribute('src')); b.hidden = !on; b.textContent = v.muted ? '🔇' : '🔊'; }; b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); v.muted = !v.muted; if (!v.muted) { const p = v.play(); if (p && p.catch) p.catch(() => {}); } sync(); }); v.addEventListener('volumechange', sync); v.addEventListener('playing', sync); sync(); return sync; };
+const isVid = u => /\.(mp4|webm|mov)($|\?)/i.test(String(u || ''));
+const vidThumb = src => `<video class="cxv" src="${esc(src)}#t=0.5" muted playsinline webkit-playsinline disablepictureinpicture preload="metadata" aria-hidden="true"></video><i class="vplay" aria-hidden="true">▶</i>`;
+const img = (src, alt, extra = '') => isVid(src) ? vidThumb(src) : isPdf(src) ? `<span class="pdfi" role="img" aria-label="PDF"><b>📄</b>PDF</span>` :  `<img src="${esc(src)}" alt="${esc(alt)}" loading="lazy" decoding="async" ${extra}>`;
 /* fade images in once loaded (no inline handlers, so a strict Content-Security-Policy works) */
 document.addEventListener('load', e => { if (e.target && e.target.tagName === 'IMG') e.target.classList.add('in'); }, true);
 const markLoaded = () => $$('img').forEach(i => { if (i.complete && i.naturalWidth) i.classList.add('in'); });
@@ -122,7 +151,7 @@ function shell() {
   <div class="modal" id="pModal"><div class="bg" data-close></div><div class="box wide"><button class="x" data-close aria-label="Close">${ico('x')}</button><div id="pBody"></div></div></div>
   <div class="lb" id="lb" aria-modal="true" role="dialog">
     <div class="lb-top"><span class="lb-count" id="lbCount"></span><div class="lb-tools"><button class="lb-b" id="lbZi" aria-label="Zoom in">${ico('zin')}</button><button class="lb-b" id="lbZo" aria-label="Zoom out">${ico('zout')}</button><button class="lb-b" id="lbX" aria-label="Close">${ico('x')}</button></div></div>
-    <div class="lb-stage" id="lbStage"><button class="lb-nav p" id="lbP" aria-label="Previous">${ico('left')}</button><img class="lb-img" id="lbImg" alt="" draggable="false"><button class="lb-nav n" id="lbN" aria-label="Next">${ico('right')}</button></div>
+    <div class="lb-stage" id="lbStage"><button class="lb-nav p" id="lbP" aria-label="Previous">${ico('left')}</button><img class="lb-img" id="lbImg" alt="" draggable="false"><video class="lb-img lb-vid" id="lbVid" controls loop playsinline hidden></video><button class="lb-nav n" id="lbN" aria-label="Next">${ico('right')}</button></div>
     <div class="lb-cap" id="lbCap"></div>
   </div>`;
   langLabel();
@@ -177,7 +206,7 @@ function offerInfo(o) {
   return { items, count, price, was, save, pct, photos };
 }
 const ofPrice = n => n.price != null ? `<div class="of-price"><b>${money(n.price)}</b>${n.was != null ? `<s>${money(n.was)}</s>` : ''}</div>` : '';
-const ofThumb = x => x.img && !isPdf(x.img) ? `<img src="${esc(x.img)}" alt="" loading="lazy" decoding="async">` : `<span>${esc((x.en || x.ta || '•').trim().charAt(0).toUpperCase())}</span>`;
+const ofThumb = x => x.img && isVid(x.img) ? vidThumb(x.img) : x.img && !isPdf(x.img) ? `<img src="${esc(x.img)}" alt="" loading="lazy" decoding="async">` : `<span>${esc((x.en || x.ta || '•').trim().charAt(0).toUpperCase())}</span>`;
 function offerCards() {
   const all = liveOffers(), N = Math.floor(Number(C.site.offersHomeCount)), list = N > 0 ? all.slice(0, N) : all;
   return `<div class="of-grid">${list.map((o, i) => {
@@ -206,25 +235,26 @@ function openOffer(id, fromHash) {
   let pg = $('#opage'); if (!pg) { pg = document.createElement('div'); pg.id = 'opage'; pg.className = 'opage'; pg.setAttribute('role', 'dialog'); pg.setAttribute('aria-modal', 'true'); document.body.appendChild(pg); }
   pg.innerHTML = `<div class="op-bar"><button class="op-arrow" data-opclose aria-label="Back">←</button><b class="op-bt">${f[0]} ${bi(o.titleTa, o.titleEn)}</b><button class="op-x" data-opclose aria-label="Close">✕</button></div>
   <div class="op-in ofd of-${t}">
-    <section class="ofd-hero">${o.image && !isPdf(o.image) ? `<img class="ofd-bg" src="${esc(o.image)}" alt="">` : ''}<span class="of-wm big">${f[0]}</span>
+    <section class="ofd-hero">${o.image && isVid(o.image) ? `<video class="ofd-bg" src="${esc(o.image)}" ${vidSound(o.image) ? '' : 'muted'} loop autoplay playsinline webkit-playsinline disablepictureinpicture></video>` : o.image && !isPdf(o.image) ? `<img class="ofd-bg" src="${esc(o.image)}" alt="">` : ''}<span class="of-wm big">${f[0]}</span>
       <div class="of-tags"><span class="of-tag">${f[0]} ${bi(f[2], f[1])}</span>${o.badge ? `<span class="of-tag alt">${esc(o.badge)}</span>` : ''}${!live ? `<span class="of-tag end">${started ? ox('ended') : ox('soon')}</span>` : ''}</div>
       <h1>${bi(o.titleTa, o.titleEn)}</h1>${o.tagTa || o.tagEn ? `<p>${bi(o.tagTa, o.tagEn)}</p>` : ''}</section>
     ${n.price != null ? `<section class="ofd-ticket"><div class="tk-l"><small>${ox('price')}</small><div class="tk-p"><b>${money(n.price)}</b>${n.was != null ? `<s>${money(n.was)}</s>` : ''}</div>${n.save ? `<em>🎉 ${ox('save')} ${money(n.save)} (${n.pct}%)</em>` : ''}</div><div class="tk-r">${n.count ? `<div><b>${n.count}</b><span>${ox('items')}</span></div>` : ''}${n.pct ? `<div class="hot"><b>${n.pct}%</b><span>OFF</span></div>` : ''}</div></section>` : ''}
     ${live && o.timer !== false && o.endDate ? `<section class="ofd-cd"><small>⏳ ${ox('ends')}</small><div data-cd="${esc(o.endDate)}"><div><b>00</b><span>${ox('d')}</span></div><div><b>00</b><span>${ox('h')}</span></div><div><b>00</b><span>${ox('m')}</span></div><div><b>00</b><span>${ox('s')}</span></div></div></section>` : ''}
     ${o.startDate || o.endDate ? `<div class="ofd-dates">${o.startDate ? `<span>📅 ${ox('from')}: <b>${dFmt(o.startDate)}</b></span>` : ''}${o.endDate ? `<span>🏁 ${ox('till')}: <b>${dFmt(o.endDate)}</b></span>` : ''}</div>` : ''}
     ${n.items.length ? `<h2 class="ofd-h">${ox('inc')} <i>${n.count}</i></h2><div class="ofd-items">${n.items.map(x => `<div class="ofd-it"><div class="ofd-im">${ofThumb(x)}${x.qty > 1 ? `<b>×${x.qty}</b>` : ''}</div><div class="ofd-nm"><b>${bi(x.ta, x.en)}</b>${x.note ? `<small>${esc(x.note)}</small>` : ''}${x.price != null && C.site.offerItemPrices !== false ? `<em>${money(x.price)}</em>` : ''}</div></div>`).join('')}</div>` : ''}
-    ${n.photos.length ? `<h2 class="ofd-h">${ox('photos')}</h2><div class="ofd-ph">${n.photos.map((s, k) => `<button type="button" data-oph="${k}" aria-label="Photo ${k + 1}">${isPdf(s) ? '📄' : `<img src="${esc(s)}" alt="${esc(title)}" loading="lazy" decoding="async">`}</button>`).join('')}</div>` : ''}
+    ${n.photos.length ? `<h2 class="ofd-h">${ox('photos')}</h2><div class="ofd-ph">${n.photos.map((s, k) => `<button type="button" data-oph="${k}" aria-label="Photo ${k + 1}">${isPdf(s) ? '📄' : isVid(s) ? vidThumb(s) : `<img src="${esc(s)}" alt="${esc(title)}" loading="lazy" decoding="async">`}</button>`).join('')}</div>` : ''}
     ${(o.detailsTa || o.detailsEn) ? `<h2 class="ofd-h">${ox('more')}</h2><div class="op-det">${bi(o.detailsTa, o.detailsEn)}</div>` : ''}
     ${terms.length ? `<h2 class="ofd-h">${ox('terms')}</h2><ul class="ofd-terms">${terms.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
     <div class="op-cta">${o.wa === false ? '' : waBtn('', msg, ox('enq'))}${callBtn('dark')}${o.link ? btn('light', o.link, bi(o.ctaTa, o.ctaEn) || u('details')) : ''}</div>
     <button type="button" class="btn dark op-closebtn" data-opclose><span class="t">✕ ${u('closeBtn')}</span></button>
   </div>`;
   const ph = n.photos.filter(s => !isPdf(s)); $$('[data-oph]', pg).forEach(b => b.onclick = () => { const s = n.photos[+b.dataset.oph]; if (isPdf(s)) { window.open(s, '_blank', 'noopener'); return; } openLightbox(ph.map(x => ({ url: x, title, description: '' })), Math.max(0, ph.indexOf(s))); });
+  { const ov = $('video.ofd-bg', pg); if (ov) { applySnd(ov, o.image); sndBtn(ov, $('.ofd-hero', pg)); const pp = ov.play(); if (pp && pp.catch) pp.catch(() => { ov.muted = true; ov.play().catch(() => {}); }); } }
   closeModals(); pg.scrollTop = 0; pg.classList.add('open'); document.body.classList.add('op-open'); observe(pg);
   ofTick(); if (!ofTimer) ofTimer = setInterval(ofTick, 1000);
   if (!fromHash) { try { history.pushState({ op: id }, '', '#offer-' + id); } catch { /* ignore */ } }
 }
-function closeOffer(fromPop) { const pg = $('#opage'); if (!pg || !pg.classList.contains('open')) return; pg.classList.remove('open'); if (!$('#lpage.open')) document.body.classList.remove('op-open'); clearInterval(ofTimer); ofTimer = 0; if (!fromPop && history.state && history.state.op) history.back(); }
+function closeOffer(fromPop) { const pg = $('#opage'); if (!pg || !pg.classList.contains('open')) return; const ov = [...pg.querySelectorAll('video')]; ov.forEach(v => { try { v.pause(); } catch (e) { /* ignore */ } }); setTimeout(() => ov.forEach(v => { if (!v.isConnected || !v.closest('#opage.open')) { try { v.removeAttribute('src'); v.load(); } catch (e) { /* ignore */ } } }), 520); pg.classList.remove('open'); if (!$('#lpage.open')) document.body.classList.remove('op-open'); clearInterval(ofTimer); ofTimer = 0; if (!fromPop && history.state && history.state.op) history.back(); }
 const priceHtml = p => {
   const base = p.price != null && p.price !== '' ? Number(p.price) : null, unit = p.unit ? `<small> / ${esc(p.unit)}</small>` : '';
   if (base != null) return `<div class="price">${money(p.price)}${p.mrp && p.mrp > p.price ? `<s>${money(p.mrp)}</s>` : ''}${unit}</div>`;
@@ -378,8 +408,8 @@ function festSlide(o, i) {
   const badge = fsOn(o, 'bnBadgeOn') && o.badge ? `<span class="fs-bd">${esc(o.badge)}</span>` : '';
   const cd = fsOn(o, 'bnTimerOn') && o.timer !== false && o.endDate && cdText(o.endDate) ? `<span class="fs-cd" data-end="${esc(o.endDate)}">⏳ <span class="v">${cdText(o.endDate)}</span></span>` : (fsOn(o, 'bnTimerOn') && o.timer !== false && dl != null ? `<span class="fs-cd">⏳ ${leftText(dl)}</span>` : '');
   const meta = (fsOn(o, 'bnPriceOn') && n.price != null ? `<em class="pr">${money(n.price)}${n.was != null ? ` <s>${money(n.was)}</s>` : ''}</em>` : '') + (fsOn(o, 'bnPctOn') && n.pct ? `<em class="pc">${n.pct}% OFF</em>` : '');
-  const photo = fsOn(o, 'bnImgOn') && n.photos[0] && !isPdf(n.photos[0]) ? n.photos[0] : '';
-  const pic = photo ? `<span class="fs-pic has-img"><img src="${esc(photo)}" alt="" width="84" height="84" decoding="async"></span>` : (fsOn(o, 'bnEmojiOn') ? `<span class="fs-pic" aria-hidden="true">${esc(emoji)}</span>` : '');
+  const photo = fsOn(o, 'bnImgOn') ? (n.photos.find(x => x && !isPdf(x) && !isVid(x)) || '') : '';
+  const pic = photo ? `<span class="fs-pic has-img" data-em="${esc(emoji)}"><img src="${esc(photo)}" alt="" width="84" height="84" decoding="async"></span>` : (fsOn(o, 'bnEmojiOn') ? `<span class="fs-pic" aria-hidden="true">${esc(emoji)}</span>` : '');
   let btn = '';
   if (C.site.festBtnOn !== false && C.site.festBtnOn !== 'false' && fsOn(o, 'bnBtnOn')) {
     const ta = o.bnBtnTa || C.site.festBtnTa, en = o.bnBtnEn || C.site.festBtnEn;
@@ -463,20 +493,23 @@ function openEnq(pid, type) {
   $('#enqBody').innerHTML = `<div class="formcard"><h3>${u('enqTitle')}</h3>${p ? `<p style="margin-top:6px;font-weight:600;color:var(--gold)">${esc(p.nameTa || '')} ${esc(p.name)}</p>` : ''}${enquiryForm(type || 'general', pid || '')}</div>`;
   bindForms($('#enqBody')); closeModals(); $('#enqModal').classList.add('open');
 }
-function closeModals() { $$('.modal').forEach(m => m.classList.remove('open')); }
+/* ---- video control: nothing may keep playing once its viewer is closed ---- */
+function stopVideos(root, unload) { try { (root || document).querySelectorAll('video').forEach(v => { try { v.pause(); } catch (e) { /* ignore */ } if (unload && !v.classList.contains('cxv')) { try { v.removeAttribute('src'); v.load(); } catch (e) { /* ignore */ } } }); } catch (e) { /* ignore */ } }
+function closeModals() { $$('.modal').forEach(m => { if (m.classList.contains('open')) stopVideos(m, true); m.classList.remove('open'); }); }
 function openProduct(id) {
   const p = products.find(x => x.id === id); if (!p) return; try { window.cxTrack && window.cxTrack('item', 'p:' + id, p.name); } catch {} const c = catOf(p.category) || {}; const imgs = p.images || [];
   const msg = `Hi, I would like details about: ${p.name}${p.nameTa ? ' (' + p.nameTa + ')' : ''}`;
-  $('#pBody').innerHTML = `<div class="pd" style="padding:22px"><div><div class="pd-main" id="pdMain">${badgeHtml(p)}${imgs.length ? `<img src="${esc(imgs[0])}" alt="${esc(p.name)}" id="pdImg">` : `<div class="ph" style="height:100%"><span class="em" style="font-size:110px">${esc(c.icon || '🛍️')}</span></div>`}</div>
-    ${imgs.length > 1 ? `<div class="thumbs">${imgs.map((s, i) => `<button class="${i ? '' : 'on'}" data-th="${i}" aria-label="Photo ${i + 1}"><img src="${esc(s)}" alt=""></button>`).join('')}</div>` : ''}</div>
+  $('#pBody').innerHTML = `<div class="pd" style="padding:22px"><div><div class="pd-main" id="pdMain">${badgeHtml(p)}${imgs.length ? `<img src="${esc(imgs[0])}" alt="${esc(p.name)}" id="pdImg" ${isVid(imgs[0]) ? 'hidden' : ''}><video id="pdVid" ${isVid(imgs[0]) ? `src="${esc(imgs[0])}"` : 'hidden'} ${isVid(imgs[0]) && vidSound(imgs[0]) ? '' : 'muted'} loop autoplay playsinline controls></video>` : `<div class="ph" style="height:100%"><span class="em" style="font-size:110px">${esc(c.icon || '🛍️')}</span></div>`}</div>
+    ${imgs.length > 1 ? `<div class="thumbs">${imgs.map((s, i) => `<button class="${i ? '' : 'on'}" data-th="${i}" aria-label="Photo ${i + 1}">${isVid(s) ? vidThumb(s) : `<img src="${esc(s)}" alt="">`}</button>`).join('')}</div>` : ''}</div>
     <div><span class="ccat">${esc(c.icon || '')} ${esc(c.name || '')}</span><h1>${bi(p.nameTa, p.name)}</h1>${priceHtml(p)}
     <p class="desc">${bi(p.descriptionTa, p.description || p.subtitle)}</p>
     ${C.site.showAvail === true ? `<div class="avail"><div>${p.retail ? '✅' : '⛔'}<span><b>${bi(U.retail[0], U.retail[1])}</b>${p.retail ? bi(U.retailAv[0], U.retailAv[1]) : 'Not available'}</span></div>
     <div>${p.wholesale ? '✅' : '⛔'}<span><b>${bi(U.wholesale[0], U.wholesale[1])}</b>${p.wholesale ? bi(U.wholesaleAv[0], U.wholesaleAv[1]) : 'Not available'}${p.wholesaleNote ? `<br><small style="color:var(--muted)">${esc(p.wholesaleNote)}</small>` : ''}</span></div></div>` : ''}
     <div class="acts"><button class="btn gold" data-enq="${esc(p.id)}"><span class="t">${u('enquire')}</span></button>${waBtn('', msg)}${callBtn('dark')}</div></div></div>`;
-  const main = $('#pdImg'); let ci = 0;
-  $$('#pBody [data-th]').forEach(b => b.onclick = () => { ci = +b.dataset.th; main.src = imgs[ci]; $$('#pBody [data-th]').forEach(x => x.classList.toggle('on', x === b)); });
-  if (imgs.length) $('#pdMain').onclick = () => openLightbox(imgs.map(s => ({ url: s, title: p.name, description: p.nameTa || '' })), ci);
+  const main = $('#pdImg'), pv = $('#pdVid'); let ci = 0;
+  const showMain = () => { const u = imgs[ci]; if (!main) return; if (isVid(u)) { main.hidden = true; pv.hidden = false; applySnd(pv, u); pv.src = u; const pr = pv.play(); if (pr && pr.catch) pr.catch(() => {}); } else { pv.pause(); pv.hidden = true; main.hidden = false; main.src = u; } };
+  $$('#pBody [data-th]').forEach(b => b.onclick = () => { ci = +b.dataset.th; showMain(); $$('#pBody [data-th]').forEach(x => x.classList.toggle('on', x === b)); });
+  if (imgs.length) $('#pdMain').onclick = e => { if (e.target.closest('video')) return; openLightbox(imgs.map(s => ({ url: s, title: p.name, description: p.nameTa || '' })), ci); };
   closeModals(); $('#pModal').classList.add('open');
 }
 
@@ -485,7 +518,7 @@ const state = { cat: 'all', q: '' };
 function page() {
   const sl = C.slides; const g = gal();
   const hero = `<div class="hero" id="home"><div class="hero-box">
-      ${sl.map((s, i) => `<div class="slide ${i ? '' : 'on'}">${s.image ? `<img src="${esc(s.image)}" alt="" ${i ? 'loading="lazy"' : ''}>` : ''}</div>`).join('')}
+      ${sl.map((s, i) => `<div class="slide ${i ? '' : 'on'}">${!s.image ? '' : /\.(mp4|webm|mov)($|\?)/i.test(s.image) ? `<video src="${esc(s.image)}#t=0.1" muted playsinline webkit-playsinline disablepictureinpicture preload="${i ? 'none' : 'auto'}" aria-hidden="true"></video>` : (i ? `<img data-src="${esc(s.image)}" alt="" decoding="async">` : `<img src="${esc(s.image)}" alt="" fetchpriority="high">`)}</div>`).join('')}
       <span class="blob a"></span><span class="blob b"></span><div class="sparks">${Array.from({ length: 10 }, (_, i) => `<i style="--x:${(i * 37 + 11) % 96}%;--d:${(i % 5) * 1.4}s;--s:${6 + (i % 4) * 3}px"></i>`).join('')}</div>
       <div class="hero-in">
         <span class="chip"><i></i><span class="cl">${bi(S('heroTagTa'), S('heroTagEn') || S('heroTag'))}</span></span>
@@ -555,10 +588,25 @@ function afterRender() {
   const hb = $('.hero-box');
   if (hb) {
     const slides = $$('.slide', hb), dots = $$('[data-slide]', hb), cap = $('#cap'); let cur = 0;
-    const show = i => { cur = i; slides.forEach((s, k) => s.classList.toggle('on', k === i)); dots.forEach((d, k) => d.classList.toggle('on', k === i));
+    const saveData = !!(navigator.connection && navigator.connection.saveData), vids = slides.map(sl => $('video', sl));
+    let inView = true;
+    vids.forEach(v => { if (v) sndBtn(v, hb); });   /* one round sound button per sound-ON video, shown only while that video is the current slide */
+    const syncHero = () => { vids.forEach((v, i) => { const b = v && v.__btn; if (b) b.style.display = i === cur && vidSound(v.getAttribute('src')) ? '' : 'none'; }); };
+    const playCur = () => { vids.forEach((v, k) => { if (!v) return; if (k === cur && inView && !document.hidden && !saveData) { v.muted = !vidSound(v.getAttribute('src')); const p = v.play(); if (p && p.catch) p.catch(() => { v.muted = true; v.play().catch(() => {}); }); } else v.pause(); }); syncHero(); };
+    const next = () => { clearTimeout(window.__cxHeroT); if (slides.length < 2) return; const v = vids[cur]; let ms = 6500;
+      if (v) { const d = v.duration; ms = isFinite(d) && d > 1 ? Math.min(Math.max(d * 1000, 4000), 20000) : 12000; }
+      window.__cxHeroT = setTimeout(() => { if (!inView || document.hidden) return next(); show((cur + 1) % slides.length); }, ms); };
+    const ld = k => { const im = slides[k] && $('img[data-src]', slides[k]); if (im) { im.src = im.dataset.src; im.removeAttribute('data-src'); } };   /* hero photos load one slide ahead, not all at once */
+    const show = i => { cur = i; ld(i); ld((i + 1) % slides.length); slides.forEach((s, k) => s.classList.toggle('on', k === i)); dots.forEach((d, k) => d.classList.toggle('on', k === i));
+      const v = vids[i]; if (v) { try { v.currentTime = 0; } catch (e) { /* not ready yet */ } }
+      playCur(); next();
       const sl = C.slides[i]; if (cap && sl) { cap.innerHTML = `<small>${esc(sl.tagTa || sl.tagEn)}</small><b>${esc(sl.titleTa || sl.titleEn)}</b>`; cap.classList.remove('swap'); void cap.offsetWidth; cap.classList.add('swap'); } };
-    show(0); clearInterval(heroTimer);
-    if (slides.length > 1) { const run = () => { clearInterval(heroTimer); heroTimer = setInterval(() => show((cur + 1) % slides.length), 6500); }; run(); dots.forEach(d => d.onclick = () => { show(+d.dataset.slide); run(); }); }
+    clearInterval(heroTimer); clearTimeout(window.__cxHeroT); heroTimer = null;
+    show(0);
+    vids.forEach(v => { if (v) v.addEventListener('loadedmetadata', () => { if (vids[cur] === v) next(); }); });
+    if ('IntersectionObserver' in window) new IntersectionObserver(en => { inView = en[0].isIntersecting; playCur(); }, { threshold: .05 }).observe(hb);
+    if (window.__cxVis) document.removeEventListener('visibilitychange', window.__cxVis); window.__cxVis = playCur; document.addEventListener('visibilitychange', playCur);
+    dots.forEach(d => d.onclick = () => show(+d.dataset.slide));
   }
   if ($('#plistGrid')) { drawProducts(); $('#q').oninput = e => { state.q = e.target.value; drawProducts(); }; $('#chips').onclick = e => { const b = e.target.closest('button'); if (b) setCat(b.dataset.c); }; }
   const gc = $('#gchips');
@@ -589,7 +637,7 @@ function observe(root) {
   if (!io) io = new IntersectionObserver(es => es.forEach(e => {
     const el = e.target, reveal = el.hasAttribute('data-r');
     if (e.isIntersecting) { el.classList.add('in'); if (el.dataset.count) countUp(el); if (animMode !== 'full') io.unobserve(el); }
-    else if (animMode === 'full' && reveal) el.classList.remove('in');
+    else if (animMode === 'full' && reveal && document.documentElement.dataset.perf !== 'lite') el.classList.remove('in');
   }), { threshold: 0, rootMargin: '0px 0px -40px 0px' });
   $$('[data-r],[data-count]', root).forEach(el => { if (animMode === 'off') { el.classList.add('in'); return; } io.observe(el); });
 }
@@ -598,20 +646,43 @@ function countUp(el) {
   const step = t => { const k = Math.min(1, (t - t0) / dur); el.textContent = m[1] + Math.round(to * (1 - Math.pow(1 - k, 3))) + m[3]; if (k < 1) requestAnimationFrame(step); }; requestAnimationFrame(step);
 }
 
+/* ---------- media safety: broken pictures, video thumbnails, background playback ---------- */
+(function () {
+  document.addEventListener('error', e => {
+    const t = e.target; if (!t || t.tagName !== 'IMG') return;
+    const pic = t.closest && t.closest('.fs-pic.has-img'); if (pic) { pic.classList.remove('has-img'); pic.textContent = pic.dataset.em || '🎁'; return; }
+    t.style.visibility = 'hidden';
+  }, true);
+  const prime = v => {
+    if (v.dataset.p) return; v.dataset.p = '1'; const mark = () => v.classList.add('rdy');
+    const seek = () => { try { const d = v.duration; v.currentTime = isFinite(d) && d > 0 ? Math.min(0.5, d / 3) : 0.1; } catch (e) { /* ignore */ } };
+    v.addEventListener('loadedmetadata', seek, { once: true }); v.addEventListener('seeked', mark, { once: true }); v.addEventListener('loadeddata', () => { if (v.readyState >= 2) mark(); }, { once: true });
+    v.addEventListener('error', () => v.classList.add('bad'), { once: true });
+    setTimeout(() => { if (!v.classList.contains('rdy') && !v.classList.contains('bad') && v.isConnected) { v.preload = 'auto'; try { v.load(); } catch (e) { /* ignore */ } } }, 2500);
+    if (v.readyState >= 1) seek();
+  };
+  let q = 0; const scanV = () => { q = 0; document.querySelectorAll('video.cxv:not([data-p])').forEach(prime); };
+  new MutationObserver(ms => { if (!q && ms.some(m => m.addedNodes.length)) q = requestAnimationFrame(scanV); }).observe(document.body || document.documentElement, { childList: true, subtree: true });
+  scanV();
+  const pauseAll = () => document.querySelectorAll('video').forEach(v => { try { v.pause(); } catch (e) { /* ignore */ } });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) pauseAll(); else document.querySelectorAll('#opage.open video.ofd-bg').forEach(v => { const p = v.play(); if (p && p.catch) p.catch(() => {}); }); });
+  addEventListener('pagehide', pauseAll);
+})();
+
 /* ---------- lightbox ---------- */
 let LB = { list: [], i: 0, s: 1, x: 0, y: 0 };
 function openLightbox(list, i) { const cur = list[i]; if (cur && isPdf(cur.url)) { window.open(cur.url, '_blank', 'noopener'); return; } list = list.filter(x => !isPdf(x.url)); if (!list.length) return; i = Math.max(0, list.indexOf(cur)); LB.list = list; LB.i = i; $('#lb').classList.add('open'); document.body.style.overflow = 'hidden'; lbShow(0); }
-function closeLightbox() { $('#lb').classList.remove('open'); document.body.style.overflow = ''; }
+function closeLightbox() { const vd = $('#lbVid'); if (vd) { try { vd.pause(); vd.removeAttribute('src'); vd.load(); } catch (e) { /* ignore */ } } $('#lb').classList.remove('open'); document.body.style.overflow = ''; }
 function lbTransform(anim) { const im = $('#lbImg'); im.classList.toggle('anim', !!anim); im.style.transform = `translate(${LB.x}px,${LB.y}px) scale(${LB.s})`; im.style.cursor = LB.s > 1 ? 'grab' : 'zoom-in'; }
 function lbReset() { LB.s = 1; LB.x = 0; LB.y = 0; lbTransform(false); }
 function lbShow(dir) {
   const n = LB.list.length; if (!n) return; LB.i = (LB.i + dir + n) % n; const it = LB.list[LB.i], im = $('#lbImg');
   lbReset(); im.classList.remove('fl', 'fr'); void im.offsetWidth; if (dir) im.classList.add(dir > 0 ? 'fl' : 'fr');
-  im.src = it.url; im.alt = it.title || '';
+  const vd = $('#lbVid'); if (isVid(it.url)) { im.hidden = true; vd.hidden = false; applySnd(vd, it.url); vd.src = it.url; const pr = vd.play(); if (pr && pr.catch) pr.catch(() => { vd.muted = true; vd.play().catch(() => {}); }); } else { vd.pause(); vd.hidden = true; im.hidden = false; im.src = it.url; } im.alt = it.title || '';
   $('#lbCount').textContent = `${LB.i + 1} / ${n}`;
   $('#lbCap').innerHTML = `${it.title ? `<b>${esc(it.title)}</b>` : ''}${it.description ? `<span>${esc(it.description)}</span>` : ''}`;
   $('#lbP').style.display = $('#lbN').style.display = n > 1 ? '' : 'none';
-  [1, -1].forEach(d => { const o = new Image(); o.src = LB.list[(LB.i + d + n) % n].url; });
+  [1, -1].forEach(d => { const u = LB.list[(LB.i + d + n) % n].url; if (!isVid(u)) { const o = new Image(); o.src = u; } });
 }
 function lbZoom(k, ax, ay) { const ns = Math.min(4, Math.max(1, LB.s * k)); if (ns === LB.s) return; const r = ns / LB.s; LB.x = (LB.x - (ax || 0)) * r + (ax || 0); LB.y = (LB.y - (ay || 0)) * r + (ay || 0); LB.s = ns; if (ns === 1) { LB.x = 0; LB.y = 0; } lbTransform(true); }
 let kbBound = false;
@@ -732,7 +803,7 @@ function applyUI() {
   document.documentElement.dataset.glow = g('uiGlow') === false || g('uiGlow') === 'false' ? 'off' : 'on';
 }
 function renderAll(keep) {
-  const y = scrollY; prep(); applyLabels(); applyUI(); buildNav(); clearInterval(heroTimer); shell(); markLoaded(); afterRender();
+  const y = scrollY; prep(); applyLabels(); applyUI(); buildNav(); clearInterval(heroTimer); clearTimeout(window.__cxHeroT); shell(); markLoaded(); afterRender();
   document.title = S('seoTitle') || `${C.shop.name} | ${C.shop.nameTa || ''} – Retail & Wholesale, ${C.shop.city || ''}`;
   if (keep) scrollTo(0, y);
   fitHeader();
@@ -841,7 +912,7 @@ function onScroll() {
   $('#progress').style.width = (h > 0 ? y / h * 100 : 0) + '%';
   const t = $('#top'); if (t) t.classList.toggle('scrolled', y > 10); const up = $('#toTop'); if (up) up.classList.toggle('show', y > 600);
   const dy = y - lastY; if (Math.abs(dy) > 4) { const d = dy > 0 ? 'down' : 'up'; if (root.dataset.dir !== d) root.dataset.dir = d; lastY = y; }
-  if (animMode === 'full' && y < 1100) { const hb = $('.hero-box'); if (hb) hb.style.setProperty('--py', Math.min(y * (innerWidth < 760 ? .1 : .2), 80).toFixed(1) + 'px'); }
+  if (animMode === 'full' && document.documentElement.dataset.perf !== 'lite' && y < 1100) { const hb = $('.hero-box'); if (hb) hb.style.setProperty('--py', Math.min(y * (innerWidth < 760 ? .1 : .2), 80).toFixed(1) + 'px'); }
 }
 addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(onScroll); } }, { passive: true });
 document.addEventListener('pointermove', e => { const t = e.target.closest && e.target.closest('.btn,.card,.offer'); if (!t) return; const r = t.getBoundingClientRect(); t.style.setProperty('--mx', (e.clientX - r.left) + 'px'); t.style.setProperty('--my', (e.clientY - r.top) + 'px'); }, { passive: true });
@@ -956,4 +1027,46 @@ boot();
     e.preventDefault();
     setTimeout(() => { window.cxGo(el, true); try { history.replaceState(history.state, '', '#' + id); } catch { /* ignore */ } }, 80);   /* after the mobile drawer has closed */
   }, true);
+})();
+
+/* ---------- Running glow light round EVERY box (admin: Display & Sizes > Animations & effects) ----------
+   A rainbow light runs round the border of every box. It is drawn only for boxes that are on screen, moves with transform only (GPU), and nothing is measured while scrolling. */
+(function () {
+  try {
+    const SEL = '.cats .cat, .card[data-pcat], .of-card, .fest-s, .gi, .why > *, .stat, .rwc, .testi > *, .ci';
+    const R = document.documentElement; let t = 0, n = 0, io = null, ro = null;
+    const vis = new Set(); let capQ = 0;
+    const cap = () => { if (capQ) return; capQ = requestAnimationFrame(() => { capQ = 0; const mid = innerHeight / 2; [...vis].map(el => { const r = el.getBoundingClientRect(); return [Math.abs(r.top + r.height / 2 - mid), el]; }).sort((x, y) => x[0] - y[0]).forEach((x, i) => x[1].classList.toggle('gl-v', i < 10)); }); };
+    const site = () => { const c = window.__cxC; return c && c.site ? c.site : {}; };
+    const DEFC = ['#ff3b6b', '#ffb02e', '#3ddc84', '#3fb4ff', '#a78bfa'];
+    function apply() {
+      const st = site(), offv = st.glowBoxes === false || st.glowBoxes === 'false';
+      R.dataset.glBox = offv ? 'off' : 'on';
+      const num = (k, d, lo, hi) => { const v = Number(st[k]); return st[k] === undefined || st[k] === '' || !isFinite(v) ? d : Math.min(hi, Math.max(lo, v)); };
+      const cols = DEFC.map((d, i) => { const v = st['glowC' + (i + 1)]; return /^#[0-9a-f]{6}$/i.test(String(v || '')) ? v : d; });
+      cols.forEach((c, i) => R.style.setProperty('--gc' + (i + 1), c));
+      const h = parseInt(cols[0].slice(1), 16); R.style.setProperty('--gc-soft', 'rgba(' + (h >> 16) + ',' + ((h >> 8) & 255) + ',' + (h & 255) + ',.35)');
+      R.style.setProperty('--gl-w', num('glowW', 2.5, 1, 6) + 'px'); R.style.setProperty('--gl-s', num('glowSpeed', 2.5, 1, 20) + 's'); R.style.setProperty('--gl-arc', (num('glowArc', 30, 5, 100) * 3.6).toFixed(1) + 'deg');
+      return !offv;
+    }
+    const add = () => {
+      const host = document.getElementById('site'); if (!host || !apply()) return;
+      if (!io) {
+        io = new IntersectionObserver(es => { es.forEach(e => { if (e.isIntersecting) vis.add(e.target); else { vis.delete(e.target); e.target.classList.remove('gl-v'); } }); cap(); }, { rootMargin: '120px' });
+        ro = new ResizeObserver(es => es.forEach(e => { const b = e.borderBoxSize && e.borderBoxSize[0]; const w = b ? b.inlineSize : e.contentRect.width, h = b ? b.blockSize : e.contentRect.height; e.target.style.setProperty('--gd', Math.ceil(Math.hypot(w, h)) + 8 + 'px'); }));
+      }
+      host.querySelectorAll(SEL).forEach(el => {
+        if (el.classList.contains('gl-t')) return;
+        el.classList.add('gl-t'); if (getComputedStyle(el).position === 'static') el.classList.add('gl-rel');
+        el.style.setProperty('--gdl', (-(n++ % 7) * 0.9).toFixed(1) + 's');
+        el.insertAdjacentHTML('beforeend', '<span class="gbl" aria-hidden="true"></span><span class="gfx" aria-hidden="true"><i></i></span>');
+        io.observe(el); ro.observe(el);
+      });
+    };
+    const later = () => { clearTimeout(t); t = setTimeout(add, 60); };
+    if (!window.IntersectionObserver || !window.ResizeObserver) return;
+    new MutationObserver(ms => { if (ms.some(m => [...m.addedNodes].some(x => x.nodeType === 1 && !x.classList.contains('gbl') && !x.classList.contains('gfx')))) later(); }).observe(document.getElementById('site') || document.body, { childList: true, subtree: true });
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', later); else later();
+    addEventListener('load', later);
+  } catch (e) { /* decoration only */ }
 })();

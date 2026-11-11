@@ -286,3 +286,23 @@ tr.pkhl>td{background:#fff3c4}
 .pick-box>.btn{margin-top:6px;min-height:46px}
 .pick-box>*,.pk-row{flex:none!important}
 .pick-box{overflow-y:auto;-webkit-overflow-scrolling:touch}
+
+.imgf .pv.isvid{position:relative;overflow:hidden;background:#2b1a10}.imgf .pv .vbadge{position:absolute;left:4px;bottom:4px;background:#000b;color:#fff;font-size:10px;padding:1px 6px;border-radius:99px}
+
+[data-vid]:not(.isvid){position:relative;background:#2b1a10!important}[data-vid]:not(.isvid)::before{content:"🎬\A VIDEO";white-space:pre;position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#fff;font-weight:800;font-size:11px;line-height:1.2}
+
+[data-vid]:not(.isvid)[data-snd="1"]::before{content:"🎬\A 🔊 SOUND"}[data-vid]:not(.isvid)[data-snd="0"]::before{content:"🎬\A 🔇 SILENT"}
+
+/* v2.7 sound bar + preview */
+[data-vurl]{position:relative;cursor:zoom-in}
+.sndbar{position:absolute;left:0;right:0;bottom:0;z-index:5;border:0;border-radius:0 0 inherit inherit;background:rgba(20,10,4,.82);color:#fff;font:700 12px/1 inherit;padding:9px 6px;cursor:pointer;width:100%}
+.sndbar.on{background:#1f7a3d}
+.pimgs .pi[data-vurl] .sndbar{font-size:10px;padding:6px 2px}
+#cxPrev{position:fixed;inset:0;z-index:100000;background:rgba(10,5,2,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px 10px 18px}
+#cxPrev .pvbox{flex:1;min-height:0;width:100%;display:grid;place-items:center}
+#cxPrev img,#cxPrev video{max-width:100%;max-height:100%;width:auto;height:auto;border-radius:8px;background:#000;object-fit:contain}
+#cxPrev video{width:min(100%,1100px);height:100%}
+#cxPrev .pvx{position:absolute;top:10px;right:10px;width:46px;height:46px;border-radius:50%;border:0;background:rgba(255,255,255,.18);color:#fff;font-size:20px;cursor:pointer}
+#cxPrev .pvsnd{color:#fff;opacity:.8;font-size:13px;padding-top:8px}
+
+#cxPrev video.nosnd::-webkit-media-controls-mute-button,#cxPrev video.nosnd::-webkit-media-controls-volume-slider,#cxPrev video.nosnd::-webkit-media-controls-volume-control-container,#cxPrev video.nosnd::-webkit-media-controls-volume-slider-container{display:none!important}

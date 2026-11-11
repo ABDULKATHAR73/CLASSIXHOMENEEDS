@@ -1,3 +1,41 @@
+# v3.8 - bigger photos, 2-minute videos, upload progress in MB
+* Photos / PDFs / HEIC: up to **20 MB per file** (was 12 MB).
+* Videos: up to **2 minutes**, any file size. The length is checked in the admin; the server streams videos straight to disk, so even a very large video does not use the server's memory. Videos over 50 MB are not packed into the Full backup ZIP or copied to Supabase (a ZIP is built in memory); they stay on the server disk.
+* Upload progress (Admin): shows the percent, MB sent of total MB for each file, and for many files at once the overall MB sent / total MB, files done and percent.
+
+# v3.7 - photo quality + video sound rule
+* Photos: up to 2400 px (PNG 2000 px), JPEG quality 95 (was 1600 px / 86). JPEGs up to 3 MB and 2400 px are uploaded untouched (no re-compression). HEIC phone photos: quality 97 on the phone, 93 / 2400 px on the server. Videos are never re-compressed (uploaded exactly as they are).
+* Video sound: a video is silent and shows NO sound / volume control on the customer site unless Sound ON is set for that video in Admin. For Sound ON videos: hero slides and offer pages get a small round sound button; product and gallery videos keep their normal controls. In the Admin preview a Sound OFF video is muted with no volume control.
+
+# v3.6.2 - Admin > Display & Sizes > Animations & effects: new "Colour length" (5-100 %) = how much of the border is coloured, the rest stays white. "Time for one round" is now real seconds (1-20, default 2.5).
+
+# v3.6 - effects stay ON, but made cheap (less lag) + [health] log removed
+* Removed: the `[health]` log line. (Admin > Server memory card still works.)
+* Rainbow border light: now a short running arc (white border left around it), 2.5x faster, starts the moment a box appears, keeps running while scrolling; max 10 boxes at a time (nearest the middle of the screen).
+* Endless animations (sparks, bob, sheen, glow, pulse...): run only for sections on screen and pause while scrolling.
+* Blur glass: kept, with smaller blur. Phone header is solid (looks the same, no blur cost).
+* Scroll re-animation: kept.
+* Emergency only: if a screen is slower than 30 fps, extras drop automatically. Test: `?perf=lite` / `?perf=full`.
+
+# v3.3.1 - launch checklist (the [health] log line was REMOVED in v3.5)
+* (Removed in v3.5) every 10 minutes the server wrote one line to the host's Logs (Render > Logs): `[health] up ... | memory ... MB | CPU ...% | requests ... | server errors ... | Supabase ...% used`. A WARNING line appears if memory goes above 400 MB (free host limit 512 MB), if there are many server errors, or if Supabase is not connected. It costs nothing while visitors browse.
+* Checked: load test (60,000 requests, 300 at once, 0 errors), memory stays flat (about 150 MB), CPU, log scan (no errors), Supabase connection reuse.
+* Nothing visible on the website or admin changed.
+
+# v3.3.0 - launch check (public hosting)
+* Checked with a slowed-down phone CPU: scrolling holds 60 frames/s on a 4x slower phone; page loads in about 1 second. Server tested with 500 visitors at once: 0 errors (about 3000 requests/second).
+* Home hero photos now load one slide ahead instead of all at once (less data on the first visit; slides still change without a blank flash).
+* Nothing else changed: look, glow, animations, videos, Supabase live bar and emoji fix are exactly as in v3.2.1.
+
+# v3.2.1 - emoji fix added (colour emoji on old Windows / old browsers; does nothing and downloads nothing on devices that already show emoji)
+
+# v3.2.0 - video + live Supabase progress added to the smooth v2.1-glow base (nothing else changed)
+* **Videos:** Hero slides accept MP4 / WebM / MOV (up to 2 minutes, any size). Gallery, Offer photos and Product photos accept videos too, with a play thumbnail, full-screen player, and sound ON/OFF bar under each video in the admin (new file admin/media-tools.js). Closing a viewer or leaving the tab stops the video.
+* **Supabase / Backup & Security:** the storage bar now reads the REAL size live from Supabase (refreshes every 15 s + "Refresh storage" button); files deleted in Supabase disappear from the bar. Backups list shows ZIP safety copies with delete buttons and "Keep only the latest 5".
+* Glow, animations, scrolling, header, banner and every other effect are exactly as in v2.1-glow (v4.17.2) - untouched.
+
+# v4.17.2 - running rainbow glow light round every box (on-screen boxes only, GPU transform, pauses while scrolling). Admin > Display & Sizes > Animations & effects: ON/OFF, 5 colours, thickness, speed. Everything else = v2.1-final.
+
 # v4.17.0 - Find setting (tap anything on the website, see every setting for it)
 
 - **New button in the admin top bar: "Find setting".** It opens your customer website inside the admin panel. Tap any text, button, heading or photo - the admin jumps to the exact setting and highlights it so you can change it and press Save.

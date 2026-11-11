@@ -47,17 +47,18 @@ if (ADMIN_PATH === '' || ['/', '/api', '/assets', '/uploads', '/robots.txt'].inc
 }
 
 const MAX_JSON = 6 * 1024 * 1024;
-const MAX_UPLOAD = 12 * 1024 * 1024; /* 12 MB per file (phone HEIC photos are converted + shrunk on the server) */
+const MAX_UPLOAD = 20 * 1024 * 1024; /* photos / PDFs / HEIC: 20 MB per file (HEIC photos are converted + shrunk on the server) */
+const MAX_VIDEO = 4 * 1024 * 1024 * 1024; /* videos: no practical size limit (the 2-minute length rule is checked in the admin); streamed to disk, never held in memory */
 const MAX_BACKUP_UPLOAD = 100 * 1024 * 1024;
 const SESSION_MS = 12 * 60 * 60 * 1000;
-const KEEP_BACKUPS = 40;
+const KEEP_BACKUPS = 20;
 const APP_VERSION = (() => { try { return require('./package.json').version; } catch { return ''; } })();
 
 /* ----------------------------------------------------------------- helpers */
 const MIME = {
-  '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.mjs': 'application/javascript; charset=utf-8', '.pfb': 'application/octet-stream', '.ttf': 'font/ttf',
+  '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.mjs': 'application/javascript; charset=utf-8', '.pfb': 'application/octet-stream', '.ttf': 'font/ttf', '.woff': 'font/woff', '.woff2': 'font/woff2',
   '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.ico': 'image/x-icon', '.pdf': 'application/pdf', '.txt': 'text/plain; charset=utf-8'
+  '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.ico': 'image/x-icon', '.pdf': 'application/pdf', '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime', '.txt': 'text/plain; charset=utf-8'
 };
 const TEXTY = new Set(['.html', '.css', '.js', '.json', '.svg', '.txt']);
 const escHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -110,6 +111,38 @@ function readBody(req, limit) {
     req.on('data', c => { if (over) return; n += c.length; if (n > limit) { over = true; chunks.length = 0; reject(Object.assign(new Error('Too large'), { status: 413 })); req.resume(); } else chunks.push(c); });
     req.on('end', () => resolve(Buffer.concat(chunks)));
     req.on('error', reject);
+  });
+}
+/* upload receiver: photos are held in memory (max 20 MB); VIDEOS are streamed straight to a temp file while the hash is
+   calculated, so even a very large 2-minute video never uses the server's RAM. */
+function receiveUpload(req) {
+  return new Promise((resolve, reject) => {
+    const head = []; let hn = 0, mode = '', ws = null, tmp = '', hash = null, size = 0, ext = '', dead = false;
+    const chunks = [];
+    const fail = e => { if (dead) return; dead = true; try { ws && ws.destroy(); } catch { /* ignore */ } if (tmp) fsp.unlink(tmp).catch(() => {}); chunks.length = 0; req.resume(); reject(e); };
+    const decide = () => {
+      const b = Buffer.concat(head); head.length = 0; ext = sniff(b) || '';
+      if (['mp4', 'mov', 'webm'].includes(ext)) {
+        mode = 'video'; tmp = path.join(UPLOAD_DIR, '.up-' + crypto.randomBytes(8).toString('hex') + '.tmp'); hash = crypto.createHash('sha256');
+        ws = fs.createWriteStream(tmp); ws.on('error', fail); hash.update(b); size = b.length; ws.write(b);
+      } else { mode = 'mem'; chunks.push(b); size = b.length; }
+    };
+    req.on('data', c => {
+      if (dead) return;
+      if (!mode) { head.push(c); hn += c.length; if (hn >= 64) decide(); return; }
+      size += c.length;
+      if (mode === 'mem') { if (size > MAX_UPLOAD) return fail(Object.assign(new Error('Too large'), { status: 413, photo: true })); chunks.push(c); return; }
+      if (size > MAX_VIDEO) return fail(Object.assign(new Error('Too large'), { status: 413 }));
+      hash.update(c); if (!ws.write(c)) { req.pause(); ws.once('drain', () => req.resume()); }
+    });
+    req.on('error', fail);
+    req.on('aborted', () => fail(new Error('Upload cancelled')));
+    req.on('end', () => {
+      if (dead) return;
+      if (!mode) decide();
+      if (mode === 'mem') return resolve({ buf: Buffer.concat(chunks) });
+      ws.end(() => { if (!dead) resolve({ file: tmp, name: hash.digest('hex').slice(0, 24) + '.' + ext, size }); });
+    });
   });
 }
 async function readJSON(req, limit = MAX_JSON) {
@@ -191,6 +224,8 @@ function sniff(buf) {
   if (buf.length > 12 && buf.slice(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'png';
   if (buf.length > 12 && buf.slice(0, 5).toString('latin1') === '%PDF-') return 'pdf';
   if (buf.length > 12 && buf.slice(0, 4).toString('latin1') === 'GIF8') return 'gif';
+  if (buf.length > 12 && buf[0] === 0x1a && buf[1] === 0x45 && buf[2] === 0xdf && buf[3] === 0xa3) return 'webm';
+  if (buf.length > 16 && buf.slice(4, 8).toString('latin1') === 'ftyp' && !isHeic(buf)) return buf.slice(8, 10).toString('latin1') === 'qt' ? 'mov' : 'mp4';
   if (buf.length > 12 && buf.slice(0, 4).toString('latin1') === 'RIFF' && buf.slice(8, 12).toString('latin1') === 'WEBP') return 'webp';
   return null;
 }
@@ -200,7 +235,7 @@ function convertHeic(buf) {
     let done = false, w;
     const fin = (fn, v) => { if (done) return; done = true; clearTimeout(t); try { w && w.terminate(); } catch { /* ignore */ } fn(v); };
     const t = setTimeout(() => fin(reject, new Error('Converting the HEIC photo took too long.')), 90000);
-    try { w = new Worker(path.join(ROOT, 'lib', 'heic-worker.js'), { workerData: { buf, opt: { maxSide: 1800, quality: 84 } }, resourceLimits: { maxOldGenerationSizeMb: 768 } }); }
+    try { w = new Worker(path.join(ROOT, 'lib', 'heic-worker.js'), { workerData: { buf, opt: { maxSide: 2400, quality: 93 } }, resourceLimits: { maxOldGenerationSizeMb: 768 } }); }
     catch (e) { return fin(reject, e); }
     w.once('message', m => m && m.ok ? fin(resolve, Buffer.from(m.buf)) : fin(reject, new Error((m && m.error) || 'Could not read this HEIC photo')));
     w.once('error', e => fin(reject, e));
@@ -641,7 +676,7 @@ async function reviewsAdmin(req, res, route, method) {
 
 const RP = { active: false, kind: '', phase: '', done: 0, total: 0, cancel: false };   /* backup / restore progress (read by the admin panel) */
 async function fullBackupZip(includeAuth, track) {
-  const list = [];
+  const list = []; let bigSkipped = 0;   /* videos over 50 MB stay on the server only (a ZIP is built in memory) */
   const addF = async (file, name) => { if (await exists(file)) list.push({ file, name }); };
   await addF(CONTENT_FILE,'data/content.json'); await addF(STATS_FILE,'data/stats.json'); await addF(REVIEWS_FILE,'data/reviews.json');
   if (includeAuth) await addF(AUTH_FILE,'data/admin.json');   /* optional: admin username + password HASHES (never plain passwords) */
@@ -649,7 +684,7 @@ async function fullBackupZip(includeAuth, track) {
     if (!(await exists(dir))) continue;
     for (const f of await fsp.readdir(dir)) {
       if (dir===BACKUP_DIR && !/^content-[\w.-]+\.json$/.test(f)) continue;
-      const fp=path.join(dir,f); try { if ((await fsp.stat(fp)).isFile()) list.push({ file: fp, name: (dir===UPLOAD_DIR?'data/uploads/':'data/backups/')+f }); } catch { /* skip */ }
+      const fp=path.join(dir,f); try { const st0 = await fsp.stat(fp); if (st0.isFile() && st0.size > 50 * 1048576) { bigSkipped++; continue; } if (st0.isFile()) list.push({ file: fp, name: (dir===UPLOAD_DIR?'data/uploads/':'data/backups/')+f }); } catch { /* skip */ }
     }
   }
   if (track) { RP.active = true; RP.kind = 'export'; RP.phase = 'Collecting files'; RP.done = 0; RP.total = list.length; RP.cancel = false; }
@@ -711,7 +746,7 @@ async function restoreInner(req, res) {
       if (j.user && j.s1 && j.h1) { authObj = authObj || j; continue; }
       continue;   /* manifest or another harmless file */
     }
-    if (/\.(jpe?g|png|webp|gif|pdf)$/i.test(b)) {
+    if (/\.(jpe?g|png|webp|gif|pdf|mp4|webm|mov)$/i.test(b)) {
       if (!/^[A-Za-z0-9._-]+$/.test(b) || b === '.' || b === '..') { warnings.push('Skipped file with an unsupported name: ' + trim60(b)); skipped++; continue; }
       if (!sniff(data)) { warnings.push('Skipped a file that is not a real picture / PDF: ' + trim60(b)); skipped++; continue; }
       if (!/(^|\/)uploads\//.test(name) && /(^|\/)(seed|assets|icons?)\//.test(name) && !/uploads/.test(name)) continue;
@@ -732,7 +767,7 @@ async function restoreInner(req, res) {
   if (!normalized && !uploads.length && !statsObj && !rvObj && !(wantAuth && authObj)) return sendJSON(req, res, 400, { error: 'Nothing in this ZIP could be restored (no website content, pictures, statistics or reviews were found). Please choose a backup ZIP downloaded from this admin panel.' });
   RP.total = uploads.length + backupsJson.length + 5; RP.done = 0;
   RP.phase = 'Saving a safety copy'; 
-  try { await backupCurrent(); const oldZip = await fullBackupZip(true); await fsp.writeFile(path.join(BACKUP_DIR, `pre-restore-${Date.now()}.zip`), oldZip); const pre = (await fsp.readdir(BACKUP_DIR)).filter(f => /^pre-restore-\d+\.zip$/.test(f)).sort(); for (const f of pre.slice(0, Math.max(0, pre.length - 3))) await fsp.unlink(path.join(BACKUP_DIR, f)).catch(() => {}); } catch { /* the safety copy is a bonus - never block the restore */ }
+  try { await backupCurrent(); const oldZip = await fullBackupZip(true); await fsp.writeFile(path.join(BACKUP_DIR, `pre-restore-${Date.now()}.zip`), oldZip); const pre = (await fsp.readdir(BACKUP_DIR)).filter(f => /^pre-restore-\d+\.zip$/.test(f)).sort(); for (const f of pre.slice(0, Math.max(0, pre.length - 1))) { await fsp.unlink(path.join(BACKUP_DIR, f)).catch(() => {}); cloud.removeKeys(['backups/' + f]).catch(() => {}); } } catch { /* the safety copy is a bonus - never block the restore */ }
   RP.done++;
   await fsp.mkdir(UPLOAD_DIR, { recursive: true }).catch(() => {}); await fsp.mkdir(BACKUP_DIR, { recursive: true }).catch(() => {});
   RP.phase = 'Restoring pictures and PDFs'; let pics = 0;
@@ -831,14 +866,20 @@ async function adminApi(req, res, route) {
   }
 
   if (route === '/upload' && method === 'POST') {
-    let buf; try { buf = await readBody(req, MAX_UPLOAD); } catch (e) { if (e.status === 413) return sendJSON(req, res, 413, { error: 'File is too big. The maximum size is 12 MB per file.' }); throw e; }
+    let up; try { up = await receiveUpload(req); } catch (e) { if (e.status === 413) return sendJSON(req, res, 413, { error: e.photo ? 'File is too big. The maximum size is 20 MB per photo.' : 'This video is too large for the server disk limit.' }); throw e; }
+    if (up.file) {   /* video, already on disk */
+      const final = path.join(UPLOAD_DIR, up.name);
+      if (await exists(final)) await fsp.unlink(up.file).catch(() => {}); else { await fsp.rename(up.file, final); cloud.schedule(1500); }
+      return sendJSON(req, res, 200, { ok: true, url: '/uploads/' + up.name });
+    }
+    let buf = up.buf;
     if (!buf.length) return sendJSON(req, res, 400, { error: 'The file is empty.' });
     if (isHeic(buf)) {
       try { buf = await convertHeic(buf); }
       catch (e) { console.error('HEIC conversion failed:', e.message); return sendJSON(req, res, 422, { error: 'This HEIC photo could not be converted. Please set the phone camera to "Most Compatible" (JPEG) or try another photo.', heicFail: true }); }
     }
     const saved = await saveImage(buf);
-    if (!saved) return sendJSON(req, res, 400, { error: 'This file type is not allowed. Please use JPG, PNG, HEIC or PDF.' });
+    if (!saved) return sendJSON(req, res, 400, { error: 'This file type is not allowed. Please use JPG, PNG, HEIC, PDF or (hero slides) MP4 / WebM / MOV video.' });
     return sendJSON(req, res, 200, { ok: true, url: saved.url });
   }
 
@@ -852,13 +893,14 @@ async function adminApi(req, res, route) {
   if (route === '/backup/progress' && method === 'GET') return sendJSON(req, res, 200, { active: RP.active, kind: RP.kind, phase: RP.phase, done: RP.done, total: RP.total });
   if (route === '/backup/cancel' && method === 'POST') { RP.cancel = true; return sendJSON(req, res, 200, { ok: true }); }
   if (route === '/keepawake/reset' && method === 'POST') { keepAwakeOk = 0; keepAwakeFail = 0; return sendJSON(req, res, 200, { ...cloud.status(), keepAwake: kaInfo() }); }
-  if (route === '/cloud/status' && method === 'GET') return sendJSON(req, res, 200, { ...cloud.status(), keepAwake: kaInfo() });
+  if (route === '/memory' && method === 'GET') return sendJSON(req, res, 200, memoryStatus());
+  if (route === '/cloud/status' && method === 'GET') { if (cloud.enabled && req.url.includes('live=1')) await cloud.refresh().catch(() => {}); return sendJSON(req, res, 200, { ...cloud.status(), keepAwake: kaInfo() }); }
   if (route === '/keepawake' && method === 'POST') {
     const b = (await readJSON(req)) || {}; if ('enabled' in b) KEEP_AWAKE_ON = !!b.enabled; if ('minutes' in b) { KEEP_AWAKE_MIN = clampMin(b.minutes); kaRestart(); }
     await writeJSONAtomic(KA_FILE, { keepAwake: KEEP_AWAKE_ON, minutes: KEEP_AWAKE_MIN });
     return sendJSON(req, res, 200, { ...cloud.status(), keepAwake: kaInfo() });
   }
-  if (route === '/cloud/sync' && method === 'POST') { await cloud.syncNow(); return sendJSON(req, res, 200, { ...cloud.status(), keepAwake: kaInfo() }); }
+  if (route === '/cloud/sync' && method === 'POST') { await cloud.refresh(); return sendJSON(req, res, 200, { ...cloud.status(), keepAwake: kaInfo() }); }
   if (route === '/stats' && method === 'GET') return sendJSON(req, res, 200, statsSummary());
   if (route === '/stats/report' && method === 'POST') {
     const b = (await readJSON(req)) || {}, td = dayKey(), r = String(b.range || ''); let from = String(b.from || ''), to = String(b.to || '');
@@ -874,10 +916,21 @@ async function adminApi(req, res, route) {
     return sendJSON(req, res, 200, { ok: true, report: statsReport('', '') });
   }
   if (route === '/backups' && method === 'GET') {
-    const files = (await fsp.readdir(BACKUP_DIR)).filter(f => f.startsWith('content-')).sort().reverse();
+    const files = (await fsp.readdir(BACKUP_DIR)).filter(f => /^content-[\w.-]+\.json$/.test(f) || /^pre-restore-\d+\.zip$/.test(f)).sort().reverse();
     const list = [];
-    for (const f of files) { const st = await fsp.stat(path.join(BACKUP_DIR, f)); list.push({ name: f, time: st.mtimeMs, size: st.size }); }
-    return sendJSON(req, res, 200, { backups: list });
+    for (const f of files) { try { const st = await fsp.stat(path.join(BACKUP_DIR, f)); list.push({ name: f, time: st.mtimeMs, size: st.size, zip: f.endsWith('.zip') }); } catch { /* vanished */ } }
+    return sendJSON(req, res, 200, { backups: list, total: list.reduce((a, b) => a + b.size, 0) });
+  }
+  if (route === '/backups/delete' && method === 'POST') {
+    const b = await readJSON(req, 20 * 1024); let names = [];
+    const all = (await fsp.readdir(BACKUP_DIR)).filter(f => /^content-[\w.-]+\.json$/.test(f) || /^pre-restore-\d+\.zip$/.test(f));
+    if (b.keepLatest !== undefined) { const keep = Math.max(1, Math.min(100, Math.round(Number(b.keepLatest) || 5))); const js = all.filter(f => f.startsWith('content-')).sort(); const zs = all.filter(f => f.endsWith('.zip')).sort(); names = [...js.slice(0, Math.max(0, js.length - keep)), ...zs.slice(0, Math.max(0, zs.length - 1))]; }
+    else names = (Array.isArray(b.names) ? b.names : []).map(n => path.basename(String(n))).filter(n => all.includes(n));
+    let freed = 0, removed = 0;
+    for (const n of names) { try { const st = await fsp.stat(path.join(BACKUP_DIR, n)); await fsp.unlink(path.join(BACKUP_DIR, n)); freed += st.size; removed++; } catch { /* skip */ } }
+    if (removed) await cloud.removeKeys(names.map(n => 'backups/' + n)).catch(() => {});
+    if (cloud.enabled) await cloud.refresh().catch(() => {});
+    return sendJSON(req, res, 200, { ok: true, removed, freed });
   }
   if (route === '/restore' && method === 'POST') {
     const b = await readJSON(req, 10 * 1024);
@@ -930,7 +983,7 @@ async function renderCustomerPage(req, res) {
   tpl = tpl.replace(/\{\{TITLE\}\}/g, escHtml(title)).replace(/\{\{DESC\}\}/g, escHtml(desc))
     .replace('{{SEED}}', () => `<script id="seed" type="application/json">${seed}</script>`);
   const h = { 'Content-Type': MIME['.html'], ...NO_STORE, ETag: '"p' + fileVer(path.join(ROOT, 'public', 'index.html')) + '-' + (content.v || 0) + '-' + rvVer + '-' + sv + cv + '"',
-    'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; frame-src https://www.google.com https://maps.google.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+    'Content-Security-Policy': "default-src 'self'; media-src 'self' blob: data: https:; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; frame-src https://www.google.com https://maps.google.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=()' };
   pageCache.set(content, { rv: rvVer, sv: sv + cv, t: fileVer(path.join(ROOT, 'public', 'index.html')), html: tpl, h });
   send(req, res, 200, tpl, h);
@@ -938,11 +991,11 @@ async function renderCustomerPage(req, res) {
 async function renderAdminPage(req, res) {
   let tpl = await fsp.readFile(path.join(ROOT, 'admin', 'index.html'), 'utf8');
   const tp = T.resolve(content.site);
-  tpl = tpl.replace(/\{\{BASE\}\}\/(admin\.js|admin\.css|typography\.js)/g, (m, f) => escHtml(ADMIN_PATH) + '/' + f + '?v=' + fileVer(path.join(ROOT, f === 'typography.js' ? 'lib' : 'admin', f)))
+  tpl = tpl.replace(/\{\{BASE\}\}\/(admin\.js|admin\.css|media-tools\.js|typography\.js)/g, (m, f) => escHtml(ADMIN_PATH) + '/' + f + '?v=' + fileVer(path.join(ROOT, f === 'typography.js' ? 'lib' : 'admin', f)))
     .replace(/\{\{BASE\}\}/g, escHtml(ADMIN_PATH)).replace(/\{\{SITE_URL\}\}/g, escHtml(SITE_URL)).replace(/\{\{LOGO\}\}/g, escHtml((() => { const l = (content && content.site && content.site.logo) || DEFAULT_LOGO; return /^\/(uploads|assets)\/[\w.-]+$/.test(l) ? l : DEFAULT_LOGO; })()))
     .replace('{{TYPO_FONTS}}', () => `<link rel="stylesheet" href="${escHtml(T.fontsHref(tp))}">`).replace('{{TYPO_STYLE}}', () => `<style id="cx-typo">${T.css(tp)}</style>`);
   send(req, res, 200, tpl, { 'Content-Type': MIME['.html'], ...NO_STORE, 'X-Robots-Tag': 'noindex, nofollow, noarchive', 'X-Frame-Options': 'DENY',
-    'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'" });
+    'Content-Security-Policy': "default-src 'self'; media-src 'self' blob: data: https:; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'" });
 }
 
 /* ----------------------------------------------------------------- router */
@@ -970,7 +1023,7 @@ async function handle(req, res) {
     if (rest === '/heic2any.min.js') return serveFile(req, res, path.join(ROOT, 'admin', 'heic2any.min.js'), { cache: 'private, max-age=86400' });
     if (rest.startsWith('/pdfjs/')) { const f = safeJoin(path.join(ROOT, 'admin', 'pdfjs'), rest.slice(7)); if (!f) return notFound(req, res); return serveFile(req, res, f, { cache: 'private, max-age=604800' }); }
     if (rest === '/typography.js') return serveFile(req, res, path.join(ROOT, 'lib', 'typography.js'), { cache: vq });
-    if (rest === '/admin.js' || rest === '/admin.css') {
+    if (rest === "/admin.js" || rest === "/admin.css" || rest === "/media-tools.js") {
       return serveFile(req, res, path.join(ROOT, 'admin', rest.slice(1)), { cache: vq });
     }
     return notFound(req, res);
@@ -1053,12 +1106,29 @@ function startKeepAwake() {
   console.log('  Keep-awake    : ' + (KEEP_AWAKE_ON ? 'ON (pings the public address every ' + KEEP_AWAKE_MIN + ' min' + (SELF_URL ? ': ' + SELF_URL : '; address is learned from the first visitor') + ')' : 'OFF (switch it on in Admin > Backup & Security)'));
 }
 
+/* ----- server memory (RAM) for the admin page: used / limit / free ----- */
+const memLimitMb = (() => {
+  const env = Number(process.env.MEMORY_LIMIT_MB); if (env > 0) return env;
+  for (const f of ['/sys/fs/cgroup/memory.max', '/sys/fs/cgroup/memory/memory.limit_in_bytes']) { try { const v = Number(fs.readFileSync(f, 'utf8').trim()); if (v > 64 * 1048576 && v < 64 * 1073741824) return Math.round(v / 1048576); } catch { /* not available */ } }
+  return 512;
+})();
+let memCpuLast = process.cpuUsage(), memCpuT = Date.now(), memCpuPct = 0;
+function memoryStatus() {
+  const now = Date.now(); if (now - memCpuT >= 2000) { const c = process.cpuUsage(); memCpuPct = Math.round(((c.user - memCpuLast.user) + (c.system - memCpuLast.system)) / 1000 / (now - memCpuT) * 100); memCpuLast = c; memCpuT = now; }
+  const m = process.memoryUsage(), used = m.rss, limit = memLimitMb * 1048576, pct = Math.min(100, used / limit * 100);
+  return { usedBytes: used, limitBytes: limit, freeBytes: Math.max(0, limit - used), usedPercent: Math.round(pct * 10) / 10, heapBytes: m.heapUsed, level: pct >= 95 ? 'critical' : pct >= 85 ? 'high' : pct >= 70 ? 'warn' : 'ok', cpuPercent: memCpuPct, uptime: Math.round(process.uptime()), requests: HM.req, serverErrors: HM.e5, limitSource: process.env.MEMORY_LIMIT_MB ? 'setting' : 'host' };
+}
+
+/* request / error counters (used by the Admin memory page) */
+const HM = { req: 0, e5: 0 };
+
 init().then(() => {
   const server = http.createServer((req, res) => {
     learnSelfUrl(req);
+    HM.req++; res.on('finish', () => { if (res.statusCode >= 500) HM.e5++; });
     handle(req, res).catch(e => { console.error(e); if (!res.headersSent) send(req, res, 500, 'Server error', { 'Content-Type': MIME['.txt'] }); else res.end(); });
   });
-  server.requestTimeout = 60000; server.headersTimeout = 30000; server.keepAliveTimeout = 65000;
+  server.requestTimeout = 30 * 60 * 1000; server.headersTimeout = 30000; server.keepAliveTimeout = 65000;
   server.on('error', e => { console.error(e.code === 'EADDRINUSE' ? `Port ${PORT} is already in use. Stop the other program or set PORT to another number.` : e); process.exit(1); });
   server.listen(PORT, HOST, () => {
     console.log(`\nClassix Home Needs is running`);

@@ -27,7 +27,7 @@ module.exports = function createCloud({ dataDir, afterPull }) {
   st.limitBytes = LIMIT_MB * 1048576;
   const synced = new Map();            // key -> "size:mtime" that is known to be stored remotely
   const lastUp = new Map();
-  let timer = null, running = null, interval = null, warned = new Set();
+  let timer = null, running = null, interval = null, warned = new Set(), lastList = 0, forceList = false;
 
   const isJwt = key.startsWith('eyJ');   /* legacy service_role keys are JWTs; new sb_secret_ keys go in apikey only */
   const hdr = extra => (isJwt ? { Authorization: 'Bearer ' + key, apikey: key, ...extra } : { apikey: key, ...extra });
@@ -156,9 +156,24 @@ module.exports = function createCloud({ dataDir, afterPull }) {
         }
         const local = await scanLocal();
         const now = Date.now(); let pending = 0, failed = 0;
+        /* LIVE view of Supabase: what is really stored there now (also notices files deleted in the Supabase website) */
+        let remote = null;
+        if (forceList || now - lastList > 20000) {
+          try { remote = await listRemote(); lastList = now; forceList = false; } catch (e) { remote = null; }
+        }
+        if (remote && remote.has('content.json')) {
+          const gone = [...synced.keys()].filter(k => !remote.has(k) && local.has(k));
+          const mirror = gone.filter(k => (k.startsWith('uploads/') || k.startsWith('backups/')) && local.get(k).sig === synced.get(k));
+          const tooMany = mirror.length > 5 && mirror.length > synced.size * 0.5;      // looks like a glitch, not a real clean-up
+          for (const k of gone) {
+            if (mirror.includes(k) && !tooMany) { try { await fsp.unlink(local.get(k).file); } catch (e) { /* already gone */ } local.delete(k); synced.delete(k); }
+            else if (!mirror.includes(k)) synced.delete(k);                              // data file deleted remotely: upload it again below
+          }
+        }
         for (const [k, v] of local) {
           if (synced.get(k) === v.sig) continue;
           if (k === 'stats.json' && now - (lastUp.get(k) || 0) < 60000) { pending++; continue; }
+          if (v.size > 45 * 1048576) { synced.set(k, v.sig); continue; }   /* very large videos stay on the server disk (Supabase free limit is 50 MB per file) */
           try { await upload(k, await fsp.readFile(v.file)); synced.set(k, v.sig); lastUp.set(k, now); } catch (e) { failed++; pending++; setErr(e); }
         }
         const gone = [...synced.keys()].filter(k => !local.has(k));
@@ -166,7 +181,8 @@ module.exports = function createCloud({ dataDir, afterPull }) {
           try { await removeRemote(gone); gone.forEach(k => synced.delete(k)); } catch (e) { setErr(e); }
         }
         st.files = local.size; st.usedBytes = 0; st.parts = { uploads: 0, backups: 0, data: 0 };
-        for (const [k, v] of local) { const n = v.size || 0; st.usedBytes += n; const g = k.startsWith('uploads/') ? 'uploads' : k.startsWith('backups/') ? 'backups' : 'data'; st.parts[g] += n; } st.pending = pending; st.connected = failed === 0; if (!failed) { st.lastSync = Date.now(); st.lastError = ''; }
+        const meter = remote && remote.size ? remote : local; st.source = meter === remote ? 'supabase' : 'local';
+        for (const [k, v] of meter) { const n = v.size || 0; st.usedBytes += n; const g = k.startsWith('uploads/') ? 'uploads' : k.startsWith('backups/') ? 'backups' : 'data'; st.parts[g] += n; } st.pending = pending; st.connected = failed === 0; if (!failed) { st.lastSync = Date.now(); st.lastError = ''; }
       } catch (e) { setErr(e); st.connected = false; }
       finally { running = null; }
       return st;
@@ -183,11 +199,13 @@ module.exports = function createCloud({ dataDir, afterPull }) {
     const hb = setInterval(() => { call('POST', `/storage/v1/object/list/${encodeURIComponent(bucket)}`, { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prefix: '', limit: 1 }), tries: 1 }).catch(() => {}); }, 6 * 3600 * 1000); if (hb.unref) hb.unref();
   }
   async function flush(maxMs = 9000) { if (!enabled) return; clearTimeout(timer); await Promise.race([syncNow().catch(() => {}), sleep(maxMs)]); }
+  async function removeKeys(keys) { if (!enabled || !keys.length) return; try { await removeRemote(keys); } catch (e) { setErr(e); } keys.forEach(k => synced.delete(k)); forceList = true; }
+  function refresh() { forceList = true; return syncNow(); }
   function status() {
     const used = st.usedBytes, limit = st.limitBytes, pct = limit ? Math.min(100, used / limit * 100) : 0;
     const level = pct >= 95 ? 'critical' : pct >= 85 ? 'high' : pct >= 70 ? 'warn' : 'ok';
     return { ...st, synced: synced.size, freeBytes: Math.max(0, limit - used), usedPercent: Math.round(pct * 10) / 10, level };
   }
 
-  return { enabled, pullOnBoot, syncNow, schedule, start, flush, status };
+  return { enabled, pullOnBoot, syncNow, refresh, removeKeys, schedule, start, flush, status };
 };

@@ -52,11 +52,11 @@ function loadHeic() { if (window.heic2any) return Promise.resolve(window.heic2an
 async function toDecodable(file) {
   if (!IS_HEIC(file)) return file;
   try { await new Promise((ok, no) => { const u = URL.createObjectURL(file), i = new Image(); i.onload = () => { URL.revokeObjectURL(u); ok(); }; i.onerror = () => { URL.revokeObjectURL(u); no(); }; i.src = u; }); return file; } catch { /* browser cannot read HEIC: use converter */ }
-  try { const h = await loadHeic(); const out = await h({ blob: file, toType: 'image/jpeg', quality: 0.9 }); return Array.isArray(out) ? out[0] : out; }
+  try { const h = await loadHeic(); const out = await h({ blob: file, toType: 'image/jpeg', quality: 0.97 }); return Array.isArray(out) ? out[0] : out; }
   catch { throw new Error('This browser cannot open HEIC photos. Use the Camera button, or set the phone camera to "Most Compatible" (JPEG).'); }
 }
 /* fast resize: decode + scale in one step (createImageBitmap), classic <img> as a fallback */
-async function shrink(file, max = 1600, keepPng = false) {
+async function shrink(file, max = 2400, keepPng = false) {
   const png = keepPng && /png/i.test(file.type || file.name);
   let src = null, w = 0, h = 0, url = '';
   try { if (window.createImageBitmap) { src = await createImageBitmap(file); w = src.width; h = src.height; } } catch { src = null; }
@@ -66,11 +66,14 @@ async function shrink(file, max = 1600, keepPng = false) {
     finally { URL.revokeObjectURL(url); }
   }
   const k = Math.min(1, max / Math.max(w, h));
-  if (!png && k === 1 && /jpe?g/i.test(file.type || '') && file.size <= 900 * 1024) { try { src.close && src.close(); } catch { /* ignore */ } return file; }   /* already small: no re-compression */
+  if (!png && k === 1 && /jpe?g/i.test(file.type || '') && file.size <= 3 * 1024 * 1024) { try { src.close && src.close(); } catch { /* ignore */ } return file; }   /* already small: no re-compression */
   const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
   const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; if (!png) { g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); }
   g.drawImage(src, 0, 0, c.width, c.height); try { src.close && src.close(); } catch { /* ignore */ }
-  return new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('Could not process that image')), png ? 'image/png' : 'image/jpeg', .86));
+  const enc = q => new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('Could not process that image')), png ? 'image/png' : 'image/jpeg', q));
+  let out = await enc(.95);   /* high quality: sharp photos, no visible damage */
+  if (!png && out.size > 18 * 1024 * 1024) out = await enc(.88);   /* only if the file would be too big for the 20 MB limit */
+  return out;
 }
 async function sniffKind(f) {
   let b; try { b = new Uint8Array(await f.slice(0, 16).arrayBuffer()); } catch { b = new Uint8Array(0); }
@@ -80,15 +83,17 @@ async function sniffKind(f) {
   if (t(0, '%PDF')) return 'pdf';
   if (t(0, 'GIF8')) return 'gif';
   if (t(0, 'RIFF') && t(8, 'WEBP')) return 'webp';
-  if (t(4, 'ftyp')) { const brand = String.fromCharCode(b[8], b[9], b[10], b[11]); return /avif|avis/.test(brand) ? 'avif' : 'heic'; }
+  if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) return 'video';
+  if (t(4, 'ftyp')) { const brand = String.fromCharCode(b[8], b[9], b[10], b[11]); return /avif|avis/.test(brand) ? 'avif' : /^(mif1|msf1|heic|heix|hevc|hevx|heim|heis|hevm|hevs|avci)$/.test(brand) ? 'heic' : 'video'; }
   if (t(0, 'BM')) return 'bmp';
   if (IS_PDF(f)) return 'pdf'; if (IS_HEIC(f)) return 'heic';
   return /^image\//i.test(f.type || '') ? 'image' : '';
 }
-const MAX_RAW = 12 * 1024 * 1024, MAX_PICK = 40 * 1024 * 1024;      /* sent to the server / allowed to pick (photos are shrunk first) */
+const MAX_VIDEO_SEC = 120, MAX_RAW = 20 * 1024 * 1024, MAX_PICK = 20 * 1024 * 1024;      /* sent to the server / allowed to pick (photos are shrunk first) */
 const fatal = m => Object.assign(new Error(m), { fatal: true });
 const tmo = (p, ms, msg) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Object.assign(new Error(msg), { retry: true })), ms); })]).finally(() => clearTimeout(t)); };
 function upUI() { let el = document.getElementById('upui'); if (!el) { el = document.createElement('div'); el.id = 'upui'; el.className = 'upui'; el.innerHTML = '<div class="upt"></div><div class="upb"><i></i></div><div class="upa"></div>'; document.body.appendChild(el); } return el; }
+const upMB = n => (n / 1048576).toFixed(n < 10485760 ? 2 : 1) + ' MB';
 function upShow(text, pct) { const el = upUI(); el.className = 'upui show' + (pct == null ? ' ind' : ''); $('.upt', el).textContent = text; $('.upb i', el).style.width = pct == null ? '' : pct + '%'; $('.upa', el).innerHTML = ''; }
 function upHide() { const el = document.getElementById('upui'); if (el) el.className = 'upui'; }
 function upAsk(msg) { return new Promise(res => { const el = upUI(); el.className = 'upui show err'; $('.upt', el).textContent = msg; const ac = $('.upa', el); ac.innerHTML = '<button type="button" class="btn gold sm" data-r="retry">↻ Retry</button><button type="button" class="btn out sm" data-r="skip">Skip</button>'; ac.onclick = e => { const b = e.target.closest('[data-r]'); if (b) { ac.onclick = null; res(b.dataset.r); } }; }); }
@@ -96,13 +101,13 @@ function xhrPost(blob, onProg, onSent) {
   return new Promise((res, rej) => {
     const x = new XMLHttpRequest(); x.open('POST', BASE + '/api/upload'); x.withCredentials = true; x.timeout = 60000 + Math.round(blob.size / 30);
     x.setRequestHeader('X-Requested-With', 'cx'); x.setRequestHeader('Content-Type', blob.type || 'application/octet-stream');
-    x.upload.onprogress = e => { if (e.lengthComputable) onProg(Math.round(e.loaded / e.total * 100)); };
+    x.upload.onprogress = e => { if (e.lengthComputable) onProg(Math.round(e.loaded / e.total * 100), e.loaded, e.total); };
     x.upload.onload = () => { if (onSent) onSent(); };
     x.onload = () => {
       let j = {}; try { j = JSON.parse(x.responseText); } catch { /* empty */ }
       if (x.status >= 200 && x.status < 300 && j.url) return res(j.url);
       if (x.status === 401) { authed = false; showLogin('Your session ended. Please sign in again.'); return rej(fatal('Your session ended. Please sign in again.')); }
-      const m = j.error || (x.status === 413 ? 'File is too big. The maximum size is 12 MB per file.' : 'Server error ' + x.status);
+      const m = j.error || (x.status === 413 ? 'File is too big. The maximum size is 20 MB per photo.' : 'Server error ' + x.status);
       const er = x.status >= 500 ? Object.assign(new Error(m), { retry: true }) : fatal(m); if (j.heicFail) er.heicFail = true; rej(er);
     };
     x.onerror = () => rej(Object.assign(new Error('Cannot reach the server. Check your internet connection.'), { retry: true }));
@@ -111,34 +116,43 @@ function xhrPost(blob, onProg, onSent) {
   });
 }
 async function prepImage(f, kind, keepPng) {
-  try { return await tmo(shrink(f, keepPng ? 1400 : 1600, keepPng && kind === 'png'), 40000, 'Processing the photo took too long. Please try again.'); }
+  try { return await tmo(shrink(f, keepPng ? 2000 : 2400, keepPng && kind === 'png'), 40000, 'Processing the photo took too long. Please try again.'); }
   catch (e) { if (['jpeg', 'png'].includes(kind) && f.size <= MAX_RAW) return new Blob([f], { type: 'image/' + kind }); throw e.retry ? e : fatal(e.message); }
 }
 /* upload one file. HEIC photos and PDFs go straight to the server (it converts HEIC to JPEG in about a second);
    other photos are resized on the phone first so they upload fast. ui = optional (text, percent) callback used for many files at once. */
-const upload = async (f, keepPng, ui) => {
+let sndQ = Promise.resolve();
+function askSound(nm) { const run = () => new Promise(res => { const el = upUI(); el.className = 'upui show err'; $('.upt', el).textContent = 'Video "' + nm + '": should it play WITH sound?'; const ac = $('.upa', el); ac.innerHTML = '<button type="button" class="btn gold sm" data-r="1">🔊 Sound ON</button><button type="button" class="btn out sm" data-r="0">🔇 Sound OFF (silent)</button>'; ac.onclick = e => { const b = e.target.closest('[data-r]'); if (b) { ac.onclick = null; res(b.dataset.r === '1'); } }; }); const p = sndQ.then(run); sndQ = p.catch(() => {}); return p; }
+function videoSeconds(f) { return new Promise(res => { let u, v = document.createElement('video'), done = false; const fin = d => { if (done) return; done = true; try { URL.revokeObjectURL(u); } catch (e) { /* ignore */ } v.removeAttribute('src'); res(d); }; try { u = URL.createObjectURL(f); v.preload = 'metadata'; v.muted = true; v.onloadedmetadata = () => fin(isFinite(v.duration) ? v.duration : 0); v.onerror = () => fin(0); v.src = u; setTimeout(() => fin(0), 6000); } catch (e) { fin(0); } }); }
+const upload = async (f, keepPng, ui, allowVideo) => {
   const nm = f.name || 'photo', quiet = typeof ui === 'function', say = quiet ? ui : upShow;
   if (!f.size) throw new Error('"' + nm + '" is empty.');
   let kind = await sniffKind(f);
   if (kind === 'pdf') { try { f = (await pdfToJpegs(f, 1, say))[0]; kind = 'jpeg'; } catch (e) { throw new Error('Could not read this PDF: ' + (e && e.message || 'error')); } }
+  if (kind === 'video') {
+    if (!allowVideo) throw new Error('"' + nm + '" is a video. Videos can be added only in Hero slides, Gallery, Offer photos and Product photos.');
+    const dur = await videoSeconds(f); if (dur && dur > MAX_VIDEO_SEC + .5) throw new Error('"' + nm + '" is ' + Math.floor(dur / 60) + ' min ' + Math.round(dur % 60) + ' sec long. Videos can be at most 2 minutes – please trim it (phone gallery > Edit > Trim) and try again.');
+  }
   if (!kind) throw new Error('"' + nm + '": this file type is not supported. Please use JPG, PNG, HEIC/HEIF or PDF.');
-  if (f.size > MAX_PICK || ((kind === 'pdf' || kind === 'heic') && f.size > MAX_RAW)) throw new Error('"' + nm + '" is ' + (f.size / 1048576).toFixed(1) + ' MB. The maximum allowed size is ' + (kind === 'pdf' || kind === 'heic' ? 12 : 40) + ' MB per file.');
+  if (kind !== 'video' && f.size > MAX_PICK) throw new Error('"' + nm + '" is ' + (f.size / 1048576).toFixed(1) + ' MB. The maximum allowed size is ' + 20 + ' MB per file.');
+  const sound = false; /* sound ON / OFF is switched with the bar under each video */
   let prepared = null, tries = 0, clientHeic = false;
   for (;;) {
     try {
       let blob;
       if (kind === 'pdf') blob = new Blob([f], { type: 'application/pdf' });
       else if (kind === 'heic') blob = new Blob([f], { type: 'image/heic' });
+      else if (kind === 'video') blob = new Blob([f], { type: f.type || 'video/mp4' });
       else { if (!prepared) { say('Preparing ' + nm + '…'); prepared = await prepImage(f, kind, keepPng); } blob = prepared; }
-      if (blob.size > MAX_RAW) throw fatal('"' + nm + '" is still bigger than 12 MB after processing. Please choose a smaller photo.');
-      say('Uploading ' + nm + ' … 0%', 0);
-      const url = await xhrPost(blob, pc => say('Uploading ' + nm + ' … ' + pc + '%', pc), () => { if (kind === 'heic') say('Converting ' + nm + ' to JPEG…'); });
+      if (kind !== 'video' && blob.size > MAX_RAW) throw fatal('"' + nm + '" is still bigger than 20 MB after processing. Please choose a smaller photo.');
+      say((kind === 'video' ? 'Uploading video ' : 'Uploading ') + nm + ' … 0% · 0 of ' + upMB(blob.size), 0, 0, blob.size);
+      const url = await xhrPost(blob, (pc, l, t) => say((kind === 'video' ? 'Uploading video ' : 'Uploading ') + nm + ' … ' + pc + '% · ' + upMB(l) + ' of ' + upMB(t), pc, l, t), () => { if (kind === 'heic') say('Converting ' + nm + ' to JPEG…'); });
       if (!quiet) { upShow('Uploaded ✓', 100); setTimeout(() => { const el = document.getElementById('upui'); if (el && $('.upt', el).textContent === 'Uploaded ✓') upHide(); }, 700); }
-      return url;
+      return kind === 'video' && sound ? url + '?snd=1' : url;
     } catch (e) {
       if (e.heicFail && kind === 'heic' && !clientHeic) {          /* server could not convert: try on this phone as a last resort */
         clientHeic = true;
-        try { say('Converting ' + nm + ' on this phone… (can take a minute)'); const conv = await tmo(toDecodable(f), 180000, 'Converting the HEIC photo took too long.'); prepared = await shrink(conv, 1600, false); kind = 'jpeg'; continue; }
+        try { say('Converting ' + nm + ' on this phone… (can take a minute)'); const conv = await tmo(toDecodable(f), 180000, 'Converting the HEIC photo took too long.'); prepared = await shrink(conv, 2400, false); kind = 'jpeg'; continue; }
         catch (e2) { if (!quiet) upHide(); throw fatal(e.message); }
       }
       if (e.fatal || !e.retry) { if (!quiet) upHide(); throw e; }
@@ -148,12 +162,13 @@ const upload = async (f, keepPng, ui) => {
   }
 };
 /* several files at once (3 at a time): returns [{url} | {error}] in the same order */
-async function uploadMany(files, keepPng) {
+async function uploadMany(files, keepPng, allowVideo) {
   files = await expandPdfs(files); if (!files.length) return [];
-  const out = new Array(files.length), pct = new Array(files.length).fill(0); let next = 0, done = 0, last = '';
-  const show = () => { const p = Math.round((done * 100 + pct.reduce((a, b, i) => a + (out[i] ? 0 : b), 0)) / files.length); upShow(`Uploading photos… ${done} / ${files.length} done` + (last ? ' · ' + last : ''), p); };
+  const out = new Array(files.length), pct = new Array(files.length).fill(0), ld = new Array(files.length).fill(0), tt = files.map(f => f.size || 0); let next = 0, done = 0, last = '';
+  const show = () => { const p = Math.round((done * 100 + pct.reduce((a, b, i) => a + (out[i] ? 0 : b), 0)) / files.length); const sent = ld.reduce((a, b) => a + b, 0), all = tt.reduce((a, b) => a + b, 0);
+    upShow(`Uploading… ${done} / ${files.length} files done · ${upMB(sent)} of ${upMB(all)} · ${p}%` + (last ? ' · ' + last : ''), p); };
   show();
-  const worker = async () => { for (;;) { const i = next++; if (i >= files.length) return; try { out[i] = { url: await upload(files[i], keepPng, (t, p) => { pct[i] = p == null ? pct[i] : p; if (p == null) { last = t; } show(); }) }; } catch (e) { out[i] = { error: e, name: files[i].name }; } done++; pct[i] = 100; show(); } };
+  const worker = async () => { for (;;) { const i = next++; if (i >= files.length) return; try { out[i] = { url: await upload(files[i], keepPng, (t, p, l, tot) => { pct[i] = p == null ? pct[i] : p; if (l != null) { ld[i] = l; tt[i] = tot; } if (p == null) { last = t; } show(); }, allowVideo) }; } catch (e) { out[i] = { error: e, name: files[i].name }; } done++; pct[i] = 100; ld[i] = tt[i]; show(); } };
   await Promise.all(Array.from({ length: Math.min(3, files.length) }, worker));
   const bad = out.filter(x => x.error);
   if (bad.length) upShow(bad.length + ' photo(s) failed: ' + bad[0].name + ' – ' + bad[0].error.message, null), setTimeout(upHide, 6000); else { upShow('Uploaded ✓', 100); setTimeout(upHide, 700); }
@@ -192,24 +207,28 @@ async function expandPdfs(files) {
   return out;
 }
 /* three ways to add a photo: camera, gallery, file – HEIC, JPEG, PNG and PDF */
-const picker = (kind, multiple) => `<div class="pick"><label class="btn out sm">📷 Open Camera<input type="file" accept="image/*" capture="environment" hidden data-pick="${kind}"></label><label class="btn gold sm">🖼️ Open Gallery<input type="file" accept="image/*,.heic,.heif,.pdf,application/pdf" ${multiple ? 'multiple' : ''} hidden data-pick="${kind}"></label><label class="btn out sm">📁 Upload File<input type="file" accept=".png,.jpg,.jpeg,.webp,.gif,.heic,.heif,.pdf,image/*,application/pdf" ${multiple ? 'multiple' : ''} hidden data-pick="${kind}"></label></div>`;
+const picker = (kind, multiple, video) => `<div class="pick"><label class="btn out sm">📷 Open Camera<input type="file" accept="image/*" capture="environment" hidden data-pick="${kind}"></label><label class="btn gold sm">🖼️ Open Gallery<input type="file" accept="image/*,.heic,.heif,.pdf,application/pdf${video ? ',video/*' : ''}" ${multiple ? 'multiple' : ''} hidden data-pick="${kind}"></label><label class="btn out sm">📁 Upload File<input type="file" accept=".png,.jpg,.jpeg,.webp,.gif,.heic,.heif,.pdf,image/*,application/pdf${video ? ',.mp4,.mov,.webm,.m4v,video/*' : ''}" ${multiple ? 'multiple' : ''} hidden data-pick="${kind}"></label></div>`;
 const pw = (id, ac, extra = '') => `<span class="pwbox"><input type="password" id="${id}" autocomplete="${ac}" ${extra}><button type="button" class="eye" data-eye="${id}" aria-label="Show password" title="Show / hide password">👁️</button></span>`;
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-eye]'); if (!b) return; e.preventDefault(); const i = document.getElementById(b.dataset.eye); if (!i) return; const show = i.type === 'password'; i.type = show ? 'text' : 'password'; b.textContent = show ? '🙈' : '👁️'; b.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); });
+const isVideoUrl = u => /\.(mp4|webm|mov)($|\?)/i.test(String(u || ''));
+const vidTag = u => `<video src="${esc(u)}#t=0.3" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;pointer-events:none"></video><b class="vbadge">🎬 VIDEO</b>`;
 const isPdfUrl = u => /\.pdf($|\?)/i.test(String(u || ''));
 const DEFAULT_LOGO = '/uploads/classix-logo.png';
 /* picture preview: normal photo, or a clear "PDF" tile for PDF files (a PDF can never be shown as a background picture) */
-const css = u => !u ? '' : isPdfUrl(u) ? 'data-pdf="1"' : `style="background-image:url('${esc(u)}')"`;
-const paintPv = (el, u) => { if (!el) return; if (isPdfUrl(u)) { el.dataset.pdf = '1'; el.style.backgroundImage = ''; } else { delete el.dataset.pdf; el.style.backgroundImage = u ? `url('${u}')` : ''; } };
+const sndOn = u => /[?&]snd=1\b/.test(String(u || ''));
+const css = u => !u ? '' : isVideoUrl(u) ? `data-vid="1" data-vurl="${esc(u)}" data-snd="${sndOn(u) ? 1 : 0}"` : isPdfUrl(u) ? 'data-pdf="1"' : `style="background-image:url('${esc(u)}')"`;
+const paintPv = (el, u) => { if (!el) return; if (isVideoUrl(u)) { delete el.dataset.pdf; el.style.backgroundImage = ''; el.dataset.vid = '1'; el.dataset.vurl = u; el.dataset.snd = sndOn(u) ? '1' : '0'; if (el.closest('[data-video]')) { el.classList.add('isvid'); el.innerHTML = vidTag(u); } return; } delete el.dataset.vid; delete el.dataset.vurl; delete el.dataset.snd; if (el.classList.contains('isvid')) { el.classList.remove('isvid'); el.innerHTML = ''; } if (isPdfUrl(u)) { el.dataset.pdf = '1'; el.style.backgroundImage = ''; } else { delete el.dataset.pdf; el.style.backgroundImage = u ? `url('${u}')` : ''; } };
 
 /* ---------- form builder ---------- */
 const plRow = (x = {}) => `<div class="prow"><div class="imgf" data-img><div class="pv" ${css(x.img)}></div><input type="hidden" data-k="__pi" value="${esc(x.img || '')}"><div class="acts">${picker('field', false)}<button type="button" class="btn red sm" data-imgclear>Remove photo</button></div></div><div class="pn"><input data-pn="en" placeholder="Item name – English" value="${esc(x.en || '')}" maxlength="120"><input data-pn="ta" placeholder="பொருள் பெயர் – தமிழ்" value="${esc(x.ta || '')}" maxlength="120"><div class="pq"><label>Qty<input data-pn="qty" type="number" min="1" step="1" placeholder="1" value="${esc(x.qty && x.qty != 1 ? x.qty : '')}"></label><label>Price ₹ (optional)<input data-pn="price" type="number" min="0" step="any" placeholder="e.g. 450" value="${esc(x.price ?? '')}"></label></div><input data-pn="note" placeholder="Small note (optional) e.g. 2 L, steel" value="${esc(x.note || '')}" maxlength="80"></div><button type="button" class="btn red sm" data-pdel>🗑 Delete this item</button></div>`;
 function fld(f, v, ns = '') {
   const [k, label, type = 'text', hint] = f; const id = ns + k; const h = hint && type !== 'select' && type !== 'range' && type !== 'color' ? `<small>${esc(hint)}</small>` : '';
   if (type === 'bool') return `<div class="f chk"><input type="checkbox" data-k="${k}" id="${id}" ${v ? 'checked' : ''}><label for="${id}">${esc(label)}</label></div>`;
+  if (type === 'media') return `<div class="f"><label>${esc(label)}</label><div class="imgf" data-img data-video="1"><div class="pv ${isVideoUrl(v) ? 'isvid' : ''}" ${css(v)}>${isVideoUrl(v) ? vidTag(v) : ''}</div><input type="hidden" data-k="${k}" value="${esc(v)}"><div class="acts">${picker('field', false, true)}<button type="button" class="btn red sm" data-imgclear>Remove</button></div></div>${h}</div>`;
   if (type === 'img') return `<div class="f"><label>${esc(label)}</label><div class="imgf" data-img><div class="pv ${k === 'logo' ? 'logo-pv' : ''}" ${css(v || (k === 'logo' ? DEFAULT_LOGO : ''))}></div><input type="hidden" data-k="${k}" value="${esc(v)}"><div class="acts">${picker('field', false)}<button type="button" class="btn red sm" data-imgclear>Remove</button></div></div>${h}</div>`;
   if (type === 'plist') { const arr = Array.isArray(v) ? v : []; return `<div class="f"><label>${esc(label)}</label><div class="plist" data-k="${k}" data-plist><div class="prows">${arr.map(plRow).join('')}</div><button type="button" class="btn gold sm" data-padd>➕ Add product</button></div><small>${esc(hint || '')}</small></div>`; }
   if (type === 'imgs') { const arr = Array.isArray(v) ? v.filter(Boolean) : [], max = Number(hint) || 5;
-    return `<div class="f"><label>${esc(label)} <small>(<b data-cnt>${arr.length}</b>${max >= 999 ? '' : '/' + max})</small></label><div class="imgs" data-imgs data-k="${k}" data-max="${max}"><div class="ithumbs">${arr.map(u => `<div class="it" data-u="${esc(u)}" ${css(u)}><button type="button" data-imgdel aria-label="Remove">✕</button></div>`).join('')}</div><div class="pickwrap" ${arr.length >= max ? 'hidden' : ''}>${picker('multi', true)}</div></div><small>HEIC, JPEG, PNG or PDF. ${max >= 999 ? 'Add unlimited photos' : 'You can add up to ' + max + ' photos'} – customers see them on the offer's detail page.</small></div>`; }
+    return `<div class="f"><label>${esc(label)} <small>(<b data-cnt>${arr.length}</b>${max >= 999 ? '' : '/' + max})</small></label><div class="imgs" data-imgs data-k="${k}" data-max="${max}"><div class="ithumbs">${arr.map(u => `<div class="it" data-u="${esc(u)}" ${css(u)}><button type="button" data-imgdel aria-label="Remove">✕</button></div>`).join('')}</div><div class="pickwrap" ${arr.length >= max ? 'hidden' : ''}>${picker('multi', true, true)}</div></div><small>HEIC, JPEG, PNG, PDF – or a short VIDEO (MP4 / MOV / WebM, max 20 seconds). ${max >= 999 ? 'Add unlimited photos' : 'You can add up to ' + max + ' photos'} – customers see them on the offer's detail page.</small></div>`; }
   if (type === 'color') { const val = /^#[0-9a-f]{6}$/i.test(String(v)) ? v : hint; return `<div class="f"><label>${esc(label)}</label><input type="color" data-k="${k}" value="${esc(val)}" style="height:46px;padding:4px"></div>`; }
   if (type === 'range') { const [mn, mx, st, un = ''] = hint; const val = v === '' || v == null ? mn : v; return `<div class="f"><label>${esc(label)}: <b data-rv>${esc(val)}${esc(un)}</b></label><input type="range" data-k="${k}" data-unit="${esc(un)}" min="${mn}" max="${mx}" step="${st}" value="${esc(val)}"></div>`; }
   if (type === 'area') return `<div class="f"><label>${esc(label)}</label><textarea data-k="${k}">${esc(v)}</textarea>${h}</div>`;
@@ -614,7 +633,7 @@ const OFFER_F = [
 const WHY_F = [['icon', 'Icon (emoji)'], ['titleTa', 'Title – Tamil / தமிழ்'], ['titleEn', 'Title – English'], ['textTa', 'Text – Tamil'], ['textEn', 'Text – English']];
 const STAT_F = [['value', 'Number (e.g. 7+, 1000+)'], ['ta', 'Label – Tamil / தமிழ்'], ['en', 'Label – English']];
 const STRIP_F = [['ta', 'Text – Tamil / தமிழ்'], ['en', 'Text – English']];
-const SLIDE_F = [['image', 'Slide photo', 'img'], ['tagTa', 'Tag – Tamil'], ['tagEn', 'Tag – English'], ['titleTa', 'Caption title – Tamil'], ['titleEn', 'Caption title – English'], ['textTa', 'Caption text – Tamil'], ['textEn', 'Caption text – English']];
+const SLIDE_F = [['image', 'Slide photo OR video (Open Gallery / Upload File accept both)', 'media', 'Video: MP4 / WebM / MOV, up to 2 minutes (any file size). Hero slides work best with 10–20 seconds, 720p (it loops behind the hero text).'], ['tagTa', 'Tag – Tamil'], ['tagEn', 'Tag – English'], ['titleTa', 'Caption title – Tamil'], ['titleEn', 'Caption title – English'], ['textTa', 'Caption text – Tamil'], ['textEn', 'Caption text – English']];
 const TESTI_F = [['name', 'Customer name'], ['role', 'Role / place (e.g. Natham)'], ['textTa', 'Words – Tamil / தமிழ்', 'area'], ['textEn', 'Words – English', 'area']];
 
 /* ---------- visitor statistics widgets ---------- */
@@ -636,6 +655,21 @@ function storageBlock(j) {
   return `<div style="margin:12px 0"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-weight:700"><span>💾 Storage used: ${fmtSize(j.usedBytes)} of ${fmtSize(j.limitBytes)}</span><span style="color:${l[0]}">${pct}%</span></div><div style="height:14px;background:#eadfce;border-radius:99px;overflow:hidden;margin:6px 0"><i style="display:block;height:100%;width:${Math.max(1, pct)}%;background:${l[0]};border-radius:99px"></i></div><p class="ps"><b style="color:${l[0]}">${l[1]}</b> · Free: <b>${fmtSize(j.freeBytes)}</b><br>Photos &amp; PDFs: <b>${fmtSize(p.uploads)}</b> · Automatic backups: <b>${fmtSize(p.backups)}</b> · Settings, reviews &amp; stats: <b>${fmtSize(p.data)}</b><br>Plan limit used for the calculation: ${fmtSize(j.limitBytes)} (Supabase free = 1 GB; on a paid plan set <code>SUPABASE_LIMIT_MB</code> in Render). Warnings appear at 70%, 85% and 95%.</p></div>`;
 }
 
+/* ---------- server memory (RAM) card ---------- */
+const MLVL = { ok: ['#2e7d32', '✅ Memory is fine'], warn: ['#b26a00', '⚠️ Memory is getting high'], high: ['#d84315', '⚠️ Memory is almost full – act soon'], critical: ['#b3261e', '🚨 Memory is FULL soon – the website may restart or slow down'] };
+const memAdvice = 'What to do: in your host (Render) open the service and press <b>Manual Deploy → Restart</b> (this clears memory in about a minute), or move to a bigger plan if it keeps coming back.';
+const memWarn = j => { if (!j || !j.level || j.level === 'ok') return ''; const l = MLVL[j.level]; return `<div class="storewarn" style="background:${l[0]};color:#fff;padding:12px 14px;border-radius:12px;margin-bottom:14px;font-weight:600;line-height:1.5">${l[1]}: <b>${fmtSize(j.usedBytes)}</b> used of <b>${fmtSize(j.limitBytes)}</b> (${j.usedPercent}%) – only <b>${fmtSize(j.freeBytes)}</b> left. ${memAdvice}</div>`; };
+function memBlock(j) {
+  const l = MLVL[j.level] || MLVL.ok, pct = j.usedPercent || 0, h = Math.floor((j.uptime || 0) / 3600), m = Math.floor(((j.uptime || 0) % 3600) / 60);
+  return `<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-weight:700"><span>🧠 Memory used: ${fmtSize(j.usedBytes)} of ${fmtSize(j.limitBytes)}</span><span style="color:${l[0]}">${pct}%</span></div><div style="height:14px;background:#eadfce;border-radius:99px;overflow:hidden;margin:6px 0"><i style="display:block;height:100%;width:${Math.max(1, pct)}%;background:${l[0]};border-radius:99px;transition:width .4s"></i></div><p class="ps"><b style="color:${l[0]}">${l[1]}</b> · Balance left: <b>${fmtSize(j.freeBytes)}</b><br>Server CPU now: <b>${j.cpuPercent}%</b> · Running for: <b>${h} h ${m} min</b> · Visits served since start: <b>${j.requests}</b> · Server errors: <b>${j.serverErrors}</b></p>${j.level !== 'ok' ? `<p class="ps">${memAdvice}</p>` : ''}${j.limitSource === 'setting' ? '' : '<p class="ps" style="opacity:.7">Limit is read from your host automatically (free Render = 512 MB). If it looks wrong, set <code>MEMORY_LIMIT_MB</code> in the host settings.</p>'}`;
+}
+async function memCard(c) {
+  const box = $('#memBox', c); if (!box) return;
+  const draw = j => { box.innerHTML = memBlock(j); };
+  try { draw(await api('/memory')); } catch { box.innerHTML = '<p class="ps">Could not read the memory. Try again later.</p>'; return; }
+  if (memCard.iv) clearInterval(memCard.iv); memCard.iv = setInterval(async () => { if (!document.body.contains(box)) return clearInterval(memCard.iv); if (document.hidden) return; try { draw(await api('/memory', { poll: true })); } catch (e) { /* ignore */ } }, 15000);
+}
+
 /* ---------- cloud / keep-awake status card ---------- */
 async function cloudCard(c) {
   const box = $('#cloudBox', c); if (!box) return;
@@ -644,11 +678,12 @@ async function cloudCard(c) {
     const ka = j.keepAwake || {};
     const cloud = !j.enabled
       ? `<p class="ps"><b>⚠️ Cloud storage is OFF.</b> On a free host (e.g. Render) photos and settings can disappear when the server restarts. Connect Supabase: add <code>SUPABASE_URL</code> and <code>SUPABASE_SERVICE_KEY</code> in your host's environment settings (steps are in <b>SUPABASE-SETUP.md</b>), then redeploy.</p>`
-      : `<p class="ps"><b>${j.connected ? '✅ Connected to Supabase' : '⚠️ Not connected right now'}</b> (${esc(j.host)} / ${esc(j.bucket)})<br>Files protected: <b>${j.synced}</b> · Last saved to cloud: <b>${ago(j.lastSync)}</b></p>${storageBlock(j)}<p class="ps">${j.pending ? ' · waiting: ' + j.pending : ''}${j.restored ? '<br>Restored ' + j.restored + ' file(s) from the cloud when the server last started.' : ''}${j.lastError ? '<br><span style="color:#b3261e">Last problem: ' + esc(j.lastError) + '</span>' : ''}</p><button type="button" class="btn out sm" id="cloudSync">↻ Save to cloud now</button>`;
+      : `<p class="ps"><b>${j.connected ? '✅ Connected to Supabase' : '⚠️ Not connected right now'}</b> (${esc(j.host)} / ${esc(j.bucket)})<br>Files protected: <b>${j.synced}</b> · Last saved to cloud: <b>${ago(j.lastSync)}</b></p>${storageBlock(j)}<p class="ps">${j.pending ? ' · waiting: ' + j.pending : ''}${j.restored ? '<br>Restored ' + j.restored + ' file(s) from the cloud when the server last started.' : ''}${j.lastError ? '<br><span style="color:#b3261e">Last problem: ' + esc(j.lastError) + '</span>' : ''}</p><button type="button" class="btn out sm" id="cloudSync">↻ Refresh storage (live from Supabase)</button>`;
     const on = ka.enabled !== false;
     box.innerHTML = storageWarn(j) + cloud + `<p class="ps" style="margin-top:10px"><b>${on ? '✅ Keep-awake is ON.' : '⏸ Keep-awake is OFF.'}</b> ${on ? 'The server visits its own address every <b>' + (ka.minutes || 8) + ' minutes</b> so a free host does not put it to sleep.' : 'A free host may sleep after 15 minutes without visitors (first visit then takes 30–60 seconds).'}${ka.url ? '<br>Address: ' + esc(ka.url) : '<br>Address will be learned from the first visitor.'} · Successful visits: <b>${ka.ok || 0}</b>${ka.failed ? ' · failed: ' + ka.failed : ''} <button type="button" class="btn out sm" id="kaReset" style="margin-left:6px">↺ Reset counter to 0</button></p><div class="row" style="align-items:center;gap:8px;margin:6px 0"><label for="kaMin">Visit every</label><input type="number" id="kaMin" min="1" max="14" value="${ka.minutes || 8}" style="width:70px"><span>minutes (1–14)</span><button type="button" class="btn out sm" id="kaSave">Save</button></div><button type="button" class="btn ${on ? 'out' : 'gold'} sm" id="kaToggle">${on ? '⏸ Turn Keep-awake OFF' : '▶ Turn Keep-awake ON'}</button>`;
   };
-  try { draw(await api('/cloud/status')); } catch { box.innerHTML = '<p class="ps">Could not read the status. Try again later.</p>'; return; }
+  try { draw(await api('/cloud/status?live=1')); } catch { box.innerHTML = '<p class="ps">Could not read the status. Try again later.</p>'; return; }
+  if (cloudCard.iv) clearInterval(cloudCard.iv); cloudCard.iv = setInterval(async () => { if (!document.body.contains(box)) return clearInterval(cloudCard.iv); if (document.hidden || (box.contains(document.activeElement) && /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName))) return; try { draw(await api('/cloud/status', { poll: true })); } catch (e) { /* ignore */ } }, 15000);
   box.onclick = async e => {
     const rs = e.target.closest('#kaReset');
     if (rs) { if (!confirm('Set the “Successful visits” counter back to 0?')) return; rs.disabled = true; try { draw(await api('/keepawake/reset', { method: 'POST', body: {} })); toast('Counter reset to 0 ✓'); } catch { rs.disabled = false; toast('Could not reset the counter', true); } return; }
@@ -656,8 +691,8 @@ async function cloudCard(c) {
     if (sv) { const m = Math.round(Number($('#kaMin', box).value)); if (!(m >= 1 && m <= 14)) { toast('Enter a number from 1 to 14'); return; } sv.disabled = true; try { draw(await api('/keepawake', { method: 'POST', body: { minutes: m } })); toast('Keep-awake: every ' + m + ' min ✓'); } catch { sv.disabled = false; toast('Could not save'); } return; }
     const t = e.target.closest('#kaToggle');
     if (t) { t.disabled = true; try { const cur = await api('/cloud/status'); const next = (cur.keepAwake || {}).enabled === false; draw(await api('/keepawake', { method: 'POST', body: { enabled: next } })); toast('Keep-awake ' + (next ? 'ON' : 'OFF') + ' ✓'); } catch { t.disabled = false; toast('Could not change Keep-awake'); } return; }
-    const b = e.target.closest('#cloudSync'); if (!b) return; b.disabled = true; b.textContent = 'Saving…';
-    try { draw(await api('/cloud/sync', { method: 'POST', body: {} })); toast('Saved to cloud ✓'); } catch { b.disabled = false; b.textContent = '↻ Save to cloud now'; toast('Could not save to cloud'); }
+    const b = e.target.closest('#cloudSync'); if (!b) return; b.disabled = true; b.textContent = 'Reading Supabase…';
+    try { draw(await api('/cloud/sync', { method: 'POST', body: {} })); toast('Storage updated ✓'); } catch { b.disabled = false; b.textContent = '↻ Refresh storage (live from Supabase)'; toast('Could not refresh'); }
   };
 }
 
@@ -670,6 +705,7 @@ const views = {
     <div class="hint"><b>Live editing:</b> everything you save here goes live on the customer website straight away. Use <b>Refresh Customer Website</b> at the top to see your change.</div>
     <div class="card"><h3>Quick actions</h3><div class="row"><button class="btn gold" data-go="home">✏️ Edit Home Page</button><button class="btn out" data-go="gallery">🖼️ Manage Gallery</button><button class="btn out" data-go="products">➕ Products</button><button class="btn out" data-go="offers">🏷️ Offers</button><button class="btn out" data-go="typography">🔤 Typography</button><button class="btn out" data-go="backup">🛡️ Backup</button></div></div>`;
     $$('[data-go]', c).forEach(b => b.onclick = () => { tab = b.dataset.go; layout(); render(); window.scrollTo(0, 0); });
+    api('/memory', { poll: true }).then(j => { const w = memWarn(j); if (w && document.body.contains(c) && tab === 'dashboard') { const hd = c.querySelector('.card'); if (hd) hd.insertAdjacentHTML('beforebegin', w); } }).catch(() => {});
     api('/cloud/status', { poll: true }).then(j => { const w = storageWarn(j); if (w && document.body.contains(c) && tab === 'dashboard') { const hd = c.querySelector('.card'); if (hd) hd.insertAdjacentHTML('beforebegin', w); } }).catch(() => {});
     const load = async () => { try { const x = await api('/stats', { poll: true }); const el = $('#dashStats', c); if (!el) return; el.innerHTML = x.total.views ? visitorCards(x) : emptyStats(); $('#dashBars', c).innerHTML = x.total.views ? `<h4 class="subh">Last 14 days</h4>${barsHtml(x.days)}` : ''; } catch (ex) { const el = $('#dashStats', c); if (el && ex.status !== 401) el.innerHTML = '<div class="empty">Visitor statistics are not available right now.</div>'; } };
     load(); const iv = setInterval(() => { if (!document.body.contains(c) || tab !== 'dashboard') return clearInterval(iv); load(); }, 20000);
@@ -1050,12 +1086,12 @@ const views = {
     $('#bnReset', c).onclick = async () => { if (!confirm('Reset the banner sizes and effects to the recommended values?')) return; Object.assign(C().site, DEFB); if (await persist()) { toast('Banner reset – live on the website ✓'); render(); } };
   },
   display(c) {
-    const DEF = { uiZoom: 100, uiHeroHeightM: 420, uiHeroHeightD: 600, uiHeroTitleM: 26, uiHeroTitleD: 54, uiLogo: 56, uiNameShow: true, uiFabLabel: false, offersHomeCount: 3, galleryHomeCount: 6, festBarOn: true, festAuto: 5, festBtnOn: true, uiBrandWrap: false, festH: null, festFont: null, festBtnFont: null, uiBrandFont: null, uiBrandTaFont: null, uiLangH: null, uiLangFont: null, uiMenuBtn: null, uiQnavH: null, uiQnavFont: null, uiAnnFont: null, uiBtnH: null, uiBtnFont: null, uiBtnPadX: null, uiBtnRadius: null, uiCardBtnFont: null, uiCardBtnH: null, uiCardTitleFont: null, uiCardTextFont: null, uiPriceFont: null, uiSecTitleFont: null, uiFooterFont: null, reviewsHomeCount: 1, offerItemPrices: true, imgFit: 'contain', imgFitHero: 'contain', imgFitProducts: 'contain', imgFitGallery: 'contain', imgFitOffers: 'contain', imgFitAbout: 'contain', uiColsM: '2', uiColsD: '4', uiRatio: '1/1', uiCatIcon: 72, uiCatColsM: '2', uiGalColsM: '2', uiGalColsD: '4', uiSecPad: 56, uiRadius: 20, uiAnim: 'full', uiGlow: true, uiColorBrown: '', uiColorBrown2: '', uiColorGold: '', uiColorGold2: '', uiColorCream: '' };
+    const DEF = { uiZoom: 100, uiHeroHeightM: 420, uiHeroHeightD: 600, uiHeroTitleM: 26, uiHeroTitleD: 54, uiLogo: 56, uiNameShow: true, uiFabLabel: false, offersHomeCount: 3, galleryHomeCount: 6, festBarOn: true, festAuto: 5, festBtnOn: true, uiBrandWrap: false, festH: null, festFont: null, festBtnFont: null, uiBrandFont: null, uiBrandTaFont: null, uiLangH: null, uiLangFont: null, uiMenuBtn: null, uiQnavH: null, uiQnavFont: null, uiAnnFont: null, uiBtnH: null, uiBtnFont: null, uiBtnPadX: null, uiBtnRadius: null, uiCardBtnFont: null, uiCardBtnH: null, uiCardTitleFont: null, uiCardTextFont: null, uiPriceFont: null, uiSecTitleFont: null, uiFooterFont: null, reviewsHomeCount: 1, offerItemPrices: true, imgFit: 'contain', imgFitHero: 'contain', imgFitProducts: 'contain', imgFitGallery: 'contain', imgFitOffers: 'contain', imgFitAbout: 'contain', uiColsM: '2', uiColsD: '4', uiRatio: '1/1', uiCatIcon: 72, uiCatColsM: '2', uiGalColsM: '2', uiGalColsD: '4', uiSecPad: 56, uiRadius: 20, uiAnim: 'full', uiGlow: true, glowBoxes: true, glowW: 2.5, glowSpeed: 2.5, glowArc: 30, uiColorBrown: '', uiColorBrown2: '', uiColorGold: '', uiColorGold2: '', uiColorCream: '' };
     const F = [
       ['-', 'Header – shop name, logo and the two side buttons'], ['uiBrandFont', 'Shop name size – English (px)', 'num', 'Leave empty = automatic'], ['uiBrandTaFont', 'Shop name size – Tamil (px)', 'num', 'Leave empty = automatic'], ['uiBrandWrap', 'Let a long shop name wrap onto two lines (instead of “…”)', 'bool'], ['uiLangH', 'Language button (த | EN) – height (px)', 'num', 'Leave empty = automatic'], ['uiLangFont', 'Language button – text size (px)', 'num', 'Leave empty = automatic'], ['uiMenuBtn', 'Menu button (☰) – size (px)', 'num', 'Leave empty = automatic'], ['uiQnavH', 'Quick menu pills under the header – height (px)', 'num', 'Leave empty = automatic'], ['uiQnavFont', 'Quick menu pills – text size (px)', 'num', 'Leave empty = automatic'], ['uiAnnFont', 'Top announcement text size (px)', 'num', 'Leave empty = automatic'],
       ['-', 'Buttons (all buttons on the website)'], ['uiBtnH', 'Button height (px)', 'num', 'Leave empty = automatic'], ['uiBtnFont', 'Button text size (px)', 'num', 'Leave empty = automatic'], ['uiBtnPadX', 'Space inside buttons – left & right (px)', 'num', 'Leave empty = automatic'], ['uiBtnRadius', 'Button corner roundness (px)', 'num', 'Leave empty = automatic'], ['uiCardBtnFont', 'Product-card buttons (Details / Enquire) – text size (px)', 'num', 'Leave empty = automatic'], ['uiCardBtnH', 'Product-card buttons – height (px)', 'num', 'Leave empty = automatic'],
       ['-', 'Text sizes – cards, prices, titles, footer'], ['uiCardTitleFont', 'Product name size (px)', 'num', 'Leave empty = automatic'], ['uiCardTextFont', 'Product description size (px)', 'num', 'Leave empty = automatic'], ['uiPriceFont', 'Price size (px)', 'num', 'Leave empty = automatic'], ['uiSecTitleFont', 'Section heading size (px)', 'num', 'Leave empty = automatic'], ['uiFooterFont', 'Footer text size (px)', 'num', 'Leave empty = automatic'],
-      ['-', 'Animations & effects'], ['uiAnim', 'Scroll animations', 'select', [['full', 'Full (recommended)'], ['light', 'Light (smoother on old phones)'], ['off', 'Off']]], ['uiScrollFx', 'Scroll effect style (how items appear while scrolling)', 'select', [['rise', 'Rise up & fade (default)'], ['zoom', 'Zoom in'], ['slide', 'Slide in from the sides'], ['bounce', 'Bouncy pop']], 'rise'], ['uiGlow', 'Glowing, shining button effects', 'bool'],
+      ['-', 'Animations & effects'], ['uiAnim', 'Scroll animations', 'select', [['full', 'Full (recommended)'], ['light', 'Light (smoother on old phones)'], ['off', 'Off']]], ['uiScrollFx', 'Scroll effect style (how items appear while scrolling)', 'select', [['rise', 'Rise up & fade (default)'], ['zoom', 'Zoom in'], ['slide', 'Slide in from the sides'], ['bounce', 'Bouncy pop']], 'rise'], ['uiGlow', 'Glowing, shining button effects', 'bool'], ['glowBoxes', 'Running glow light round every box (ON / OFF)', 'bool'], ['glowC1', 'Glow colour 1', 'color', '#ff3b6b'], ['glowC2', 'Glow colour 2', 'color', '#ffb02e'], ['glowC3', 'Glow colour 3', 'color', '#3ddc84'], ['glowC4', 'Glow colour 4', 'color', '#3fb4ff'], ['glowC5', 'Glow colour 5 (set all 5 the same for a single colour)', 'color', '#a78bfa'], ['glowW', 'Glow line thickness', 'range', [1, 6, 0.5, ' px']], ['glowSpeed', 'Time for one round of the box (smaller = faster)', 'range', [1, 20, 0.5, ' s']], ['glowArc', 'Colour length: how much of the border is coloured (the rest stays white)', 'range', [5, 100, 5, ' %']],
       ['-', 'Brand colours (leave as is to keep the current look)'], ['uiColorBrown', 'Main dark colour (header text, buttons, footer)', 'color', '#4a2f20'], ['uiColorBrown2', 'Second dark colour', 'color', '#5c3d2e'], ['uiColorGold', 'Accent colour (gold)', 'color', '#b08a2e'], ['uiColorGold2', 'Light accent colour', 'color', '#e8c97a'], ['uiColorCream', 'Page background colour', 'color', '#faf6ef'],
       ['-', 'Whole page'], ['uiZoom', 'Overall size of all page content', 'range', [70, 130, 5, '%']], ['uiSecPad', 'Space between sections', 'range', [16, 140, 4, ' px']], ['uiRadius', 'Rounded corners', 'range', [0, 40, 2, ' px']],
       ['-', 'Logo & header'], ['uiLogo', 'Logo size', 'range', [28, 140, 2, ' px']], ['uiNameShow', 'Show the shop name in the header – ON by default, turns OFF only if you untick this', 'bool', '', true],
@@ -1077,12 +1113,13 @@ const views = {
     $('#waTest').onclick = () => { const g = ($('[data-k=whatsappGroup]', c).value || '').trim(); if (!WA_RE.test(g)) return toast('Enter a valid link first: https://chat.whatsapp.com/…', true); window.open(g, '_blank', 'noopener,noreferrer'); };
   },
   backup(c) {
-    setTimeout(() => cloudCard(c), 0);
+    setTimeout(() => cloudCard(c), 0); setTimeout(() => memCard(c), 0);
     c.innerHTML = head('Backup & Security', 'Keep your content safe and protect your admin account.') + `
+    <div class="card"><h3>🖥️ Server memory (RAM)</h3><div id="memBox"><div class="empty">Checking…</div></div></div>
     <div class="card"><h3>☁️ Data safety &amp; always-awake</h3><div id="cloudBox"><div class="empty">Checking…</div></div></div>
     <div class="card"><h3>Change admin login</h3><p class="ps" style="margin-bottom:10px">You can sign in with <b>either Password 1 or Password 2</b>. Enter one current password, then change the username and/or either password. Leave a box empty to keep it. Each password needs 8+ characters with letters and numbers, and the two must be different.</p><div class="grid2"><div class="f"><label>Current password (1 or 2)</label>${pw('pw1', 'off')}</div><div class="f"><label>New username (optional)</label><input id="pwU" autocomplete="off" maxlength="40"></div><div class="f"><label>New password 1 (optional)</label>${pw('pw2', 'new-password')}</div><div class="f"><label>New password 2 (optional)</label>${pw('pw2b', 'new-password')}</div></div><button class="btn out" id="pwBtn">Change login</button></div>
     <div class="card"><h3>Full website backup (ZIP)</h3><p class="ps" style="margin-bottom:12px">Downloads EVERYTHING in one ZIP: shop details, offers, products, prices, gallery, reviews, all settings (social links, WhatsApp group switch, typography, menu, sizes), every uploaded photo/PDF, visitor statistics and saved content versions. Upload the same ZIP later (on this site or a brand-new copy) and the website comes back exactly as it was.</p><div class="f chk" style="margin-bottom:12px"><input type="checkbox" id="zipAuth"><label for="zipAuth">Also include / restore the admin login (username + password hashes). Tick this for a complete copy; keep the ZIP private.</label></div><div class="row"><button class="btn gold" id="zipExp">⬇ Download full backup (.zip)</button><label class="btn out" id="zipImpL">⬆ Restore full backup (.zip)<input type="file" id="zipImp" accept=".zip,application/zip,application/x-zip-compressed,application/octet-stream" hidden></label></div><div class="zprog" id="zipProg" hidden><div class="zp-top"><b id="zpTitle">…</b><span id="zpPct">0%</span></div><div class="zp-bar"><i id="zpFill"></i></div><div class="zp-sub" id="zpSub"></div><div class="zp-warn" id="zpWarn"></div><button type="button" class="btn red sm" id="zpCancel">✕ Cancel</button></div><p class="ps" style="margin-top:10px">Restore takes every valid file from the ZIP; wrong or damaged files are skipped automatically and never stop the restore. Before restoring, a safety copy of the current data is created. Without the tick above, restore keeps your current admin password. Store downloaded backups somewhere private.</p></div><div class="card"><h3>Content-only backup (JSON)</h3><p class="ps" style="margin-bottom:12px">For text, products and settings only; photos are not included in this small backup.</p><div class="row"><button class="btn out" id="exp">⬇ Export content (.json)</button><label class="btn out">⬆ Import content<input type="file" id="imp" accept=".json,application/json" hidden></label></div></div>
-    <div class="card"><h3>Automatic backups</h3><p class="ps" style="margin-bottom:12px">A copy of the previous version is kept every time you save (last 40). Restore one if something goes wrong.</p><div id="bk">Loading…</div></div>
+    <div class="card"><h3>Automatic backups</h3><p class="ps" style="margin-bottom:12px">A copy of the previous version is kept every time you save (latest 20 are kept). Restore one if something goes wrong. Big ZIP safety copies (made automatically before a restore) are listed here too – delete them to free space.</p><div id="bk">Loading…</div><div class="row" style="margin-top:10px"><button class="btn out sm" id="bkTrim">🧹 Keep only the latest 5 – delete the rest</button></div></div>
     <div class="card"><h3>Free up space</h3><p class="ps" style="margin-bottom:12px">Deletes uploaded photos that are not used anywhere (including in the automatic backups).</p><button class="btn out" id="clean">Delete unused photos</button></div>
     <div class="card"><h3>Sign out</h3><button class="btn red" id="out2">Sign out of this device</button></div>`;
     const dl = (name, text, type) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
@@ -1146,8 +1183,11 @@ const views = {
       } finally { zEnd(); }
     };
     $('#imp').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { const d = JSON.parse(await f.text()); if (!d.shop || !d.site || !d.categories) throw new Error('This is not a content file'); if (!confirm('Replace ALL current website content with this file?')) return; d.v = C().v; C0 = d; if (await persist(true)) { toast('Imported – live on the website ✓'); render(); } else C0 = await api('/content'); } catch (ex) { toast(ex.message, true); } e.target.value = ''; };
-    const loadBk = async () => { try { const r = await api('/backups'); $('#bk').innerHTML = r.backups.length ? `<div class="tw"><table><tbody>${r.backups.slice(0, 15).map(b => `<tr><td>${esc(new Date(b.time).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }))}</td><td>${Math.round(b.size / 1024)} KB</td><td><button class="btn out sm" data-restore="${esc(b.name)}">Restore</button></td></tr>`).join('')}</tbody></table></div>` : 'No backups yet – one is created the first time you save.';
-      $$('[data-restore]', $('#bk')).forEach(b => b.onclick = async () => { if (!confirm('Restore this version? Your current content is backed up first.')) return; try { const x = await api('/restore', { method: 'POST', body: { name: b.dataset.restore } }); C0 = x.content; toast('Restored – live on the website ✓'); render(); } catch (ex) { toast(ex.message, true); } }); } catch (ex) { $('#bk').textContent = ex.message; } };
+    const loadBk = async () => { try { const r = await api('/backups'); const fz = b => b.size >= 1048576 ? (b.size / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b.size / 1024)) + ' KB';
+      $('#bk').innerHTML = r.backups.length ? `<p class="ps">Total used by backups: <b>${fz({ size: r.total })}</b></p><div class="tw"><table><tbody>${r.backups.slice(0, 30).map(b => `<tr><td>${esc(new Date(b.time).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }))}${b.zip ? ' <small>(ZIP safety copy)</small>' : ''}</td><td>${fz(b)}</td><td>${b.zip ? '' : `<button class="btn out sm" data-restore="${esc(b.name)}">Restore</button> `}<button class="btn red sm" data-delbk="${esc(b.name)}">🗑</button></td></tr>`).join('')}</tbody></table></div>` : 'No backups yet – one is created the first time you save.';
+      $$('[data-restore]', $('#bk')).forEach(b => b.onclick = async () => { if (!confirm('Restore this version? Your current content is backed up first.')) return; try { const x = await api('/restore', { method: 'POST', body: { name: b.dataset.restore } }); C0 = x.content; toast('Restored – live on the website ✓'); render(); } catch (ex) { toast(ex.message, true); } });
+      $$('[data-delbk]', $('#bk')).forEach(b => b.onclick = async () => { if (!confirm('Delete this backup permanently?')) return; b.disabled = true; try { const x = await api('/backups/delete', { method: 'POST', body: { names: [b.dataset.delbk] } }); toast('Deleted – freed ' + (x.freed / 1048576).toFixed(1) + ' MB ✓'); loadBk(); } catch (ex) { b.disabled = false; toast(ex.message, true); } }); } catch (ex) { $('#bk').textContent = ex.message; } };
+    $('#bkTrim').onclick = async () => { if (!confirm('Keep only the latest 5 backups and delete all older ones (and old ZIP safety copies)?')) return; try { const x = await api('/backups/delete', { method: 'POST', body: { keepLatest: 5 } }); toast(`Deleted ${x.removed} file(s), freed ${(x.freed / 1048576).toFixed(1)} MB ✓`); loadBk(); } catch (ex) { toast(ex.message, true); } };
     loadBk();
     $('#clean').onclick = async () => { try { const r = await api('/cleanup', { method: 'POST', body: {} }); toast(r.removed ? `Removed ${r.removed} unused photo(s), freed ${(r.bytes / 1048576).toFixed(1)} MB` : 'No unused photos found'); } catch (ex) { toast(ex.message, true); } };
     $('#out2').onclick = logout;
@@ -1175,7 +1215,7 @@ const WA_RE = /^https:\/\/chat\.whatsapp\.com\/[A-Za-z0-9_-]{10,40}\/?(\?[^\s#]*
 /* generic pages */
 function formPage(c, title, subt, groups, extraHtml = '', opts = {}) {
   const slides = opts.slides ? C().slides.map(x => ({ ...x })) : null;
-  c.innerHTML = (title ? head(title, subt) : '') + groups.map((g, gi) => `<div class="card" data-g="${gi}"><div class="grid2">${form(g.fields, C()[g.group], 'g' + gi)}</div></div>`).join('') + (slides ? '<div class="card"><h3>Hero photo slides</h3><p class="hint">These photos slide automatically behind the hero text. Up to 6.</p><div id="sl"></div></div>' : '') + extraHtml + saveBar();
+  c.innerHTML = (title ? head(title, subt) : '') + groups.map((g, gi) => `<div class="card" data-g="${gi}"><div class="grid2">${form(g.fields, C()[g.group], 'g' + gi)}</div></div>`).join('') + (slides ? '<div class="card"><h3>Hero photo slides</h3><p class="hint">These photos / videos slide automatically behind the hero text. Up to 6. A video plays muted in a loop until the next slide.</p><div id="sl"></div></div>' : '') + extraHtml + saveBar();
   $$('.grid2', c).forEach(wide); $$('.grid2 h3', c).forEach(h => h.style.gridColumn = '1/-1');
   let sync;
   const draw = () => { if (!slides) return; $('#sl', c).innerHTML = listEditor('slides', SLIDE_F, slides, (it, i) => 'Slide ' + (i + 1), 'Add slide'); sync = bindList(c, 'slides', SLIDE_F, slides, {}, draw); };
@@ -1183,7 +1223,7 @@ function formPage(c, title, subt, groups, extraHtml = '', opts = {}) {
   $('#saveBtn', c).onclick = async () => {
     const body = {}; groups.forEach((g, gi) => { body[g.group] = { ...(body[g.group] || {}), ...read($(`[data-g="${gi}"]`, c), g.fields) }; });
     if (opts.validate) { const err = opts.validate(body); if (err) return toast(err, true); }
-    if (slides) { body.slides = sync(); if (body.slides.some(s => !s.image)) return toast('Every slide needs a photo', true); }
+    if (slides) { body.slides = sync(); if (body.slides.some(s => !s.image)) return toast('Every slide needs a photo or video', true); }
     await saveContent(body);
   };
 }
@@ -1204,7 +1244,7 @@ function galleryPage(c) {
   const syncCats = () => { gcats = $$('#gcats .item', c).map(el => ({ id: el.dataset.id, ...read(el, [['name'], ['ta']]) })); };
   const draw = () => {
     c.innerHTML = head('Gallery Management', 'Upload, edit, reorder, hide or delete shop photos. The photo you add last is shown first on the website.') +
-    `<div class="card"><h3>Upload photos</h3><div class="row">${picker('gal', true)}<span id="gMsg" style="color:var(--muted)"></span></div></div>
+    `<div class="card"><h3>Upload photos</h3><div class="row">${picker('gal', true, true)}<span id="gMsg" style="color:var(--muted)"></span></div></div>
     <div class="card" id="gtext"><h3>Gallery section text</h3><div class="grid2">${form(pairs(['galleryTitle', 'Gallery title'], ['galleryDesc', 'Gallery description', 'area']), C().site, 'gt')}</div></div>
     <div class="card"><h3>Gallery categories <small style="font-weight:400;color:var(--muted)">(filter buttons)</small></h3><div id="gcats">${gcats.map(g => `<div class="item" data-id="${esc(g.id)}"><div class="grid2"><div class="f"><label>English name</label><input data-k="name" value="${esc(g.name)}"></div><div class="f"><label>Tamil name</label><input data-k="ta" value="${esc(g.ta)}"></div></div><button class="btn red sm" data-gcdel>Delete</button></div>`).join('')}</div><button class="btn out" id="gcAdd">+ Add category</button></div>
     <h3 style="margin:18px 0 10px;color:var(--brown)">Photos (${items.length})</h3>
@@ -1214,10 +1254,11 @@ function galleryPage(c) {
       <div class="f chk"><input type="checkbox" data-k="visible" id="gv${i}" ${g.visible !== false ? 'checked' : ''}><label for="gv${i}">Show on website</label></div>
       <div class="row"><button class="btn out ic" data-mv="-9999" title="Move to the top">⤒</button><button class="btn out ic" data-mv="-1">↑</button><button class="btn out ic" data-mv="1">↓</button><label class="btn out sm">Replace<input type="file" accept="image/*,.heic,.heif,.pdf,application/pdf" hidden data-rep></label><button class="btn red sm" data-del>Delete</button></div></div>`).join('')}</div>${saveBar('Save gallery')}`;
     $$('.grid2', c).forEach(wide);
-    const gUpH = async e => { const fs = [...e.target.files]; e.target.value = ''; if (!fs.length) return; sync(); syncCats(); $('#gMsg').textContent = `Uploading ${fs.length} file(s)…`; const rs = await uploadMany(fs); const add = []; rs.forEach((r, i) => { if (r.url) add.push({ id: '', url: r.url, title: '', description: '', category: '', visible: true }); else toast(fs[i].name + ': ' + r.error.message, true); }); items.unshift(...add); draw(); if (add.length) toast(add.length + ' photo(s) added at the top – press Save gallery'); };
+    const gUpH = async e => { const fs = [...e.target.files]; e.target.value = ''; if (!fs.length) return; sync(); syncCats(); $('#gMsg').textContent = `Uploading ${fs.length} file(s)…`; const rs = await uploadMany(fs, false, true); const add = []; rs.forEach((r, i) => { if (r.url) add.push({ id: '', url: r.url, title: '', description: '', category: '', visible: true }); else toast(fs[i].name + ': ' + r.error.message, true); }); items.unshift(...add); draw(); if (add.length) toast(add.length + ' photo / video(s) added at the top – press Save gallery'); };
     $$('[data-pick=gal]', c).forEach(inp => inp.onchange = gUpH);
     $('#gcAdd').onclick = () => { sync(); syncCats(); gcats.push({ id: uid('c'), name: 'New category', ta: '' }); draw(); };
     $$('[data-gcdel]', c).forEach(b => b.onclick = () => { sync(); syncCats(); gcats.splice($$('#gcats .item').indexOf(b.closest('.item')), 1); draw(); });
+    $('#gGrid').addEventListener('cx-vurl', e => { const it = e.target.closest('.item'); if (it && items[+it.dataset.i]) items[+it.dataset.i].url = e.detail.url; });
     $('#gGrid').onclick = e => { const it = e.target.closest('.item'); if (!it) return; const i = +it.dataset.i; sync();
       if (e.target.closest('[data-del]')) { if (!confirm('Delete this photo?')) return; items.splice(i, 1); draw(); }
       const mv = e.target.closest('[data-mv]'); if (mv) { const d = +mv.dataset.mv; if (d === -9999) { if (i === 0) return; const [x] = items.splice(i, 1); items.unshift(x); } else { const j = i + d; if (j < 0 || j >= items.length) return; [items[i], items[j]] = [items[j], items[i]]; } draw(); } };
@@ -1232,12 +1273,13 @@ function productForm(c, id) {
   const p = id ? C().products.find(x => x.id === id) : { retail: true, wholesale: true, visible: true, inStock: true, featured: false, images: [] };
   p.inStock = p.inStock !== false; let imgs = [...(p.images || [])];
   const F = [['name', 'Product name (English)'], ['nameTa', 'Product name (Tamil / தமிழ்)'], ['category', 'Category', 'select', C().categories.map(x => [x.id, x.name])], ['subtitle', 'Short line (shown on card)'], ['description', 'Description (English)', 'area'], ['descriptionTa', 'Description (Tamil)', 'area'], ['price', 'Price ₹ (optional)', 'num', 'Leave empty to show “Ask for price”'], ['mrp', 'MRP ₹ (optional)', 'num'], ['unit', 'Unit (e.g. Each, Set, Dozen)'], ['badge', 'Offer badge (e.g. 10% OFF, NEW)'], ['inStock', 'In stock (switch off to show “Out of stock”)', 'bool'], ...(C().site.showAvail === true ? [['retail', 'Available in retail', 'bool'], ['wholesale', 'Available in wholesale', 'bool'], ['wholesaleNote', 'Wholesale note (e.g. Min 12 pieces)']] : []), ['featured', 'Show first on website', 'bool'], ['visible', 'Show on website', 'bool']];
-  c.innerHTML = head(id ? 'Edit product' : 'Add product', '') + `<div class="card"><div class="grid2" id="pf">${form(F, p, 'p')}</div><div class="f"><label>Photos (add as many as you like, first one is the main photo)</label><div class="pimgs" id="pimgs"></div><div style="margin-top:8px">${picker('prod', true)}</div></div><div class="err" id="perr"></div></div>
+  c.innerHTML = head(id ? 'Edit product' : 'Add product', '') + `<div class="card"><div class="grid2" id="pf">${form(F, p, 'p')}</div><div class="f"><label>Photos (add as many as you like, first one is the main photo)</label><div class="pimgs" id="pimgs"></div><div style="margin-top:8px">${picker('prod', true, true)}</div></div><div class="err" id="perr"></div></div>
   <div class="savebar"><button class="btn gold" id="pSave">💾 Save product</button><button class="btn out" id="pBack">Back</button></div>`;
   wide($('#pf'));
   const draw = () => { $('#pimgs').innerHTML = imgs.map((u, i) => `<div class="pi ${i ? '' : 'main'}" ${css(u)}>${i ? '' : '<i>Main</i>'}<button data-x="${i}">✕</button></div>`).join(''); $$('[data-x]').forEach(b => b.onclick = () => { imgs.splice(+b.dataset.x, 1); draw(); }); }; draw();
-  const pAddH = async e => { const fs = [...e.target.files]; e.target.value = ''; if (!fs.length) return; const rs = await uploadMany(fs); rs.forEach((r, i) => { if (r.url) imgs.push(r.url); else toast(fs[i].name + ': ' + r.error.message, true); }); draw(); };
+  const pAddH = async e => { const fs = [...e.target.files]; e.target.value = ''; if (!fs.length) return; const rs = await uploadMany(fs, false, true); rs.forEach((r, i) => { if (r.url) imgs.push(r.url); else toast(fs[i].name + ': ' + r.error.message, true); }); draw(); };
   $$('[data-pick=prod]').forEach(inp => inp.onchange = pAddH);
+  $('#pimgs').addEventListener('cx-vurl', e => { const i = [...$('#pimgs').children].indexOf(e.target.closest('.pi')); if (i >= 0) imgs[i] = e.detail.url; });
   $('#pBack').onclick = () => { delete sub.editP; render(); };
   $('#pSave').onclick = async () => {
     const b = read($('#pf'), F); if (!b.name.trim()) { $('#perr').textContent = 'Product name is required'; return; }
@@ -1251,7 +1293,7 @@ function productForm(c, id) {
 document.addEventListener('input', e => { const r = e.target.closest('input[type=range]'); if (!r) return; const b = r.closest('.f').querySelector('[data-rv]'); if (b) b.textContent = r.value + (r.dataset.unit || ''); });
 document.addEventListener('change', async e => {
   const inp = e.target.closest('[data-img] input[type=file]'); if (!inp || !inp.files[0]) return;
-  const box = inp.closest('[data-img]'); try { const hk = $('input[type=hidden]', box); const u = await upload(inp.files[0], hk && hk.dataset.k === 'logo'); $('input[type=hidden]', box).value = u; paintPv($('.pv', box), u); toast('Photo ready – press Save'); } catch (ex) { toast(ex.message, true); } inp.value = '';
+  const box = inp.closest('[data-img]'); try { const hk = $('input[type=hidden]', box); const u = await upload(inp.files[0], hk && hk.dataset.k === 'logo', null, !!box.dataset.video); $('input[type=hidden]', box).value = u; paintPv($('.pv', box), u); toast((isVideoUrl(u) ? 'Video' : 'Photo') + ' ready – press Save'); } catch (ex) { toast(ex.message, true); } inp.value = '';
 });
 document.addEventListener('change', async e => {
   const inp = e.target.closest('[data-imgs] input[type=file]'); if (!inp) return;
@@ -1259,7 +1301,7 @@ document.addEventListener('change', async e => {
   const files = [...inp.files]; inp.value = ''; if (!files.length) return;
   const room = max - $$('[data-u]', box).length; if (room <= 0) return toast(`You can add only ${max} photos`, true);
   if (files.length > room) toast(`Only ${room} more photo(s) can be added – extra ones skipped`, true);
-  const use = files.slice(0, room), rs = await uploadMany(use); let bad = 0;
+  const use = files.slice(0, room), rs = await uploadMany(use, false, true); let bad = 0;
   rs.forEach((r, i) => { if (!r.url) { bad++; toast(use[i].name + ': ' + r.error.message, true); return; } const d = document.createElement('div'); d.className = 'it'; d.dataset.u = r.url; paintPv(d, r.url); d.innerHTML = '<button type="button" data-imgdel aria-label="Remove">✕</button>'; th.appendChild(d); });
   imgsSync(box); if (!bad) toast('Photos ready – press Save');
 });

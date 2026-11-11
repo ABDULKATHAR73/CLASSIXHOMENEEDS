@@ -1,6 +1,6 @@
 {
   "name": "classix-home-needs",
-  "version": "2.1",
+  "version": "2.2",
   "description": "Classix Home Needs website \u2013 customer site and separate admin panel with shared live content",
   "private": true,
   "main": "server.js",
